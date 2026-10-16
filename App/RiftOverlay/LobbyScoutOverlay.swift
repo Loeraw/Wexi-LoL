@@ -119,7 +119,7 @@ private struct LobbyScoutView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(L10n.text("当前对局玩家")).font(.system(size: 14, weight: .bold))
-                Text("OP.GG · Global").font(.system(size: 9)).foregroundStyle(.secondary)
+                Text(L10n.text("OP.GG · 全球")).font(.system(size: 9)).foregroundStyle(.secondary)
                 Spacer()
                 Text(status).font(.system(size: 9)).foregroundStyle(.secondary)
                 Button(action: toggle) {

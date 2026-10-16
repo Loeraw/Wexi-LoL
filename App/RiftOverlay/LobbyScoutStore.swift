@@ -52,7 +52,7 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     func fetch(riotID: String, region: OPGGRegion) async throws -> SummonerProfile {
         guard let url = SummonerProfileURL.make(riotID: riotID, region: region) else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
-        request.setValue("WexiLoL/0.5.1", forHTTPHeaderField: "User-Agent")
+        request.setValue("WexiLoL/0.5.2", forHTTPHeaderField: "User-Agent")
         request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200,
@@ -63,7 +63,8 @@ private final class OPGGSummonerClient: @unchecked Sendable {
 
 @MainActor final class LobbyScoutStore: ObservableObject {
     @Published private(set) var rows: [LobbyPlayerRow] = []
-    @Published private(set) var status = "等待加载界面的玩家名单…"
+    @Published private var statusKey = "等待加载界面的玩家名单…"
+    @Published private var statusValues: [Int] = []
     @Published private(set) var gameTime: Double = .infinity
     @Published private(set) var activeRegion: OPGGRegion?
     @Published var regionPreference: String {
@@ -93,6 +94,13 @@ private final class OPGGSummonerClient: @unchecked Sendable {
 
     var isLoadingScreen: Bool { !rows.isEmpty && gameTime.isFinite && gameTime <= 1 }
     var isInGame: Bool { !rows.isEmpty && gameTime.isFinite && gameTime > 1 }
+    var status: String {
+        switch statusValues.count {
+        case 1: return L10n.text(statusKey, statusValues[0])
+        case 2: return L10n.text(statusKey, statusValues[0], statusValues[1])
+        default: return L10n.text(statusKey)
+        }
+    }
 
     func start() {
         pollTask?.cancel()
@@ -125,7 +133,7 @@ private final class OPGGSummonerClient: @unchecked Sendable {
             guard let region = await resolveRegion(players: players) else {
                 rows = players
                 activeRegion = nil
-                status = L10n.text("无法自动识别区服，请在设置中选择玩家区服。")
+                setStatus("无法自动识别区服，请在设置中选择玩家区服。")
                 return
             }
             activeRegion = region
@@ -142,12 +150,12 @@ private final class OPGGSummonerClient: @unchecked Sendable {
                     if let cached = cache[key], Date().timeIntervalSince(cached.0) < 900 { copy.profile = cached.1 }
                     return copy
                 }
-                status = L10n.text("正在读取玩家资料 0/%d…", rows.count)
+                setStatus("正在读取玩家资料 0/%d…", rows.count)
                 fetchTask = Task { [weak self] in await self?.fetchProfiles(signature: signature, region: region) }
             }
         } catch {
             guard !Task.isCancelled else { return }
-            if !gameTime.isFinite { status = L10n.text("等待加载界面的玩家名单…") }
+            if !gameTime.isFinite { setStatus("等待加载界面的玩家名单…") }
         }
     }
 
@@ -186,12 +194,17 @@ private final class OPGGSummonerClient: @unchecked Sendable {
                         rows[index].failed = true
                     }
                     completed += 1
-                    status = L10n.text("正在读取玩家资料 %d/%d…", completed, rows.count)
+                    setStatus("正在读取玩家资料 %d/%d…", completed, rows.count)
                 }
             }
         }
         if !Task.isCancelled, matchSignature == signature {
-            status = L10n.text(gameTime > 1 ? "玩家资料已读取 · 按 Tab 显示" : "玩家资料已读取 · 进入游戏后按 Tab 显示")
+            setStatus(gameTime > 1 ? "玩家资料已读取 · 按 Tab 显示" : "玩家资料已读取 · 进入游戏后按 Tab 显示")
         }
+    }
+
+    private func setStatus(_ key: String, _ values: Int...) {
+        statusKey = key
+        statusValues = values
     }
 }

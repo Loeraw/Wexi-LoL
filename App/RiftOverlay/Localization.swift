@@ -133,13 +133,13 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 @MainActor enum L10n {
     static func text(_ key: String, _ arguments: CVarArg...) -> String {
         let language = LanguageSettings.shared.selection
-        let format = language == .chinese ? key : (localized[language]?[key] ?? english[key] ?? key)
+        let format = language == .chinese ? key : (localized[language]?[key] ?? L10nSupplemental.text(key, language: language) ?? english[key] ?? key)
         guard !arguments.isEmpty else { return format }
         return String(format: format, locale: language.locale, arguments: arguments)
     }
 
-    // Core navigation and guide labels are translated here. Less common status
-    // details fall back to English instead of mixing several languages.
+    // Frequently used labels live here; the complete interface catalog is in
+    // LocalizationSupplemental.swift.
     private static let localized: [AppLanguage: [String: String]] = [
         .traditionalChinese: [
             "语言": "語言", "游戏客户端语言": "遊戲客戶端語言", "跟随 Wexi 语言": "跟隨 Wexi 語言",
@@ -191,7 +191,68 @@ enum AppLanguage: String, CaseIterable, Identifiable {
             "刷新": "Actualiser", "海克斯评级": "Niveaux d’optimisations", "参考列表": "Liste de référence", "搜索英雄：": "Rechercher un champion :",
             "搜索海克斯：": "Rechercher une optimisation :", "已授权": "Autorisé", "未授权": "Non autorisé", "开启录屏权限": "Autoriser l’enregistrement",
             "打开系统权限设置": "Ouvrir les autorisations système", "校准技能＋位置": "Calibrer les compétences", "保存技能位置": "Enregistrer les positions",
-            "取消校准": "Annuler", "胜率 %.1f%%": "Taux de victoire %.1f%%", "选用率 %.1f%% · %d 场": "Sélection %.1f%% · %d parties"
+            "取消校准": "Annuler", "胜率 %.1f%%": "Taux de victoire %.1f%%", "选用率 %.1f%% · %d 场": "Sélection %.1f%% · %d parties",
+            "当前玩家区服": "Région actuelle", "等待检测": "En attente de détection",
+            "无法自动识别区服，请在设置中选择玩家区服。": "Impossible de détecter la région. Choisissez-la dans les réglages.",
+            "显示玩家段位与战绩": "Afficher les rangs et l’historique des joueurs",
+            "Loading 阶段只读取一次玩家资料并保存在本局缓存；进入游戏后按住 Tab 只切换显示，不会重新请求 OP.GG。": "Les profils sont chargés une seule fois pendant l’écran de chargement et conservés pour la partie. En jeu, maintenir Tab affiche ou masque les profils sans interroger de nouveau OP.GG.",
+            "等待加载界面的玩家名单…": "En attente des joueurs de l’écran de chargement…",
+            "正在读取玩家资料 0/%d…": "Chargement des profils 0/%d…", "正在读取玩家资料 %d/%d…": "Chargement des profils %d/%d…",
+            "玩家资料已读取 · 按 Tab 显示": "Profils chargés · Maintenez Tab pour les afficher",
+            "玩家资料已读取 · 进入游戏后按 Tab 显示": "Profils chargés · Maintenez Tab après le début de la partie",
+            "无公开数据": "Aucune donnée publique", "读取中…": "Chargement…", "未定级": "Non classé",
+            "段位 · 赛季胜率 · 最近战绩": "Rang · Taux de victoire de la saison · Parties récentes",
+            "当前对局玩家": "Joueurs de la partie", "蓝方": "Équipe bleue", "红方": "Équipe rouge",
+            "显示玩家资料": "Afficher les joueurs", "隐藏玩家资料": "Masquer les joueurs", "Wexi LoL 当前对局玩家": "Joueurs de la partie · Wexi LoL",
+            "IRON": "Fer", "BRONZE": "Bronze", "SILVER": "Argent", "GOLD": "Or", "PLATINUM": "Platine",
+            "EMERALD": "Émeraude", "DIAMOND": "Diamant", "MASTER": "Maître", "GRANDMASTER": "Grand Maître", "CHALLENGER": "Challenger",
+            "显示推荐出装与胜率": "Afficher le build recommandé et son taux de victoire",
+            "根据当前已购买的核心装备匹配 OP.GG 主流三件套，并标出下一件；胜率是该完整路线的统计。": "Associe vos objets principaux à un build populaire de trois objets sur OP.GG et indique le prochain achat. Le taux de victoire correspond au build complet.",
+            "已加载出装路线": "Builds chargés", "%d 套": "%d builds", "OP.GG 出装来源 ↗": "Source des builds OP.GG ↗",
+            "斗魂评级根据同稀有度海克斯的 OP.GG 胜率与场次计算，并非 OP.GG 官方分级。": "Les niveaux d’Arène sont calculés avec le taux de victoire et le nombre de parties OP.GG pour une même rareté. Ce ne sont pas des niveaux officiels OP.GG.",
+            "胜率 %.1f%% · 选用率 %.1f%% · %d 场": "Taux de victoire %.1f%% · Sélection %.1f%% · %d parties",
+            "OP.GG · 选用率 %.1f%% · %d 场": "OP.GG · Sélection %.1f%% · %d parties", "Wexi LoL 推荐出装": "Build recommandé · Wexi LoL",
+            "显示游戏内目标倒计时": "Afficher les chronos des objectifs en jeu", "当前模式": "Mode actuel",
+            "大乱斗": "ARAM", "召唤师峡谷": "Faille de l’invocateur", "等待对局": "En attente d’une partie", "等待对局数据…": "En attente des données de la partie…",
+            "史诗野怪使用 Riot 对局事件自动计时。": "Les monstres épiques sont chronométrés automatiquement à partir des événements locaux de Riot.",
+            "按住 Tab 约 1 秒，同步计分板上的血包倒计时。": "Maintenez Tab environ une seconde pour synchroniser les chronos des reliques de soin du tableau des scores.",
+            "正在读取 Tab 计分板…": "Lecture du tableau des scores…",
+            "已从 Tab 计分板同步：当前没有血包倒计时。": "Tableau des scores synchronisé : aucune relique de soin n’est en cours de recharge.",
+            "已从 Tab 计分板同步 %d 个血包倒计时。": "%d chronos de reliques de soin synchronisés depuis le tableau des scores.",
+            "当前模式没有启用目标计时。": "Les chronos des objectifs ne sont pas disponibles dans ce mode.",
+            "峡谷的小龙、远古巨龙和纳什男爵会读取 Riot 本地事件自动计时；巢虫与先锋显示首次刷新。": "Le dragon, le dragon ancestral et le baron sont chronométrés à partir des événements locaux de Riot. Les larves du Néant et le héraut affichent leur première apparition.",
+            "大乱斗中按住 Tab 约 1 秒，应用会读取计分板自带的血包时间并自动校准；关闭计分板后继续倒数。": "En ARAM, maintenez Tab environ une seconde. L’app lit les chronos des reliques de soin du tableau des scores et poursuit le décompte après sa fermeture.",
+            "小龙": "Dragon", "远古巨龙": "Dragon ancestral", "虚空巢虫": "Larves du Néant", "峡谷先锋": "Héraut de la Faille", "纳什男爵": "Baron Nashor",
+            "血包 %d": "Relique %d", "血包首次刷新": "Première apparition des reliques", "血包 %d · %d:%02d": "Relique %d · %d:%02d", "Wexi LoL 目标计时": "Chronos des objectifs · Wexi LoL",
+            "只读取英雄联盟游戏窗口，用于识别海克斯选择、技能加点和 Tab 计分板计时；不会保存或上传画面。": "Lit uniquement la fenêtre de League of Legends pour reconnaître les optimisations, les améliorations de compétences et les chronos du tableau des scores. Aucune image n’est enregistrée ni envoyée.",
+            "技能加点": "Ordre des compétences", "来源提供 1–%d 级顺序 · 最常用方案 · %d 场样本": "Niveaux 1 à %d · Ordre le plus populaire · %d parties",
+            "白银": "Argent", "黄金": "Or", "棱彩": "Prismatique", "未知稀有度": "Rareté inconnue", "%@，评级 %@": "%@, niveau %@",
+            "全球区服 · 游戏原位提示设置": "Toutes les régions · Réglages des indications en jeu", "透明度": "Opacité",
+            "⌥⌘K 开始/保存校准\nTab 显示玩家资料并同步大乱斗血包计时\n⌘M 收起设置到菜单栏": "⌥⌘K Démarrer / enregistrer le calibrage\nTab Afficher les profils et synchroniser les reliques ARAM\n⌘M Réduire les réglages dans la barre des menus",
+            "自动识别英雄 · OP.GG 全球数据 · 版本 %@": "Détection automatique du champion · Données mondiales OP.GG · Patch %@",
+            "获取时间 %@": "Mis à jour %@",
+            "下方是当前英雄的静态评级。游戏内只标注识别到的三张卡片，不显示常驻列表。": "Voici les niveaux statiques de ce champion. En jeu, seules les trois cartes détectées sont annotées.",
+            "OP.GG 加点来源 ↗": "Source des compétences OP.GG ↗", "OP.GG 海克斯来源 ↗": "Source des optimisations OP.GG ↗",
+            "技能＋优先自动定位；识别不到时可拖动校准一次。": "Les boutons d’amélioration sont localisés automatiquement. Faites glisser les repères une fois si la détection échoue.",
+            "已保存技能＋位置；更改游戏界面缩放后请重新校准。": "Positions enregistrées. Recalibrez après avoir modifié l’échelle de l’interface du jeu.",
+            "切回游戏，将四个标记分别拖到 Q/W/E/R 的＋，然后按 ⌥⌘K 保存。": "Retournez au jeu, placez les quatre repères sur les boutons + de Q/W/E/R, puis appuyez sur ⌥⌘K pour enregistrer.",
+            "请先在游戏内分别拖动四个标记，再保存位置。": "Placez d’abord les quatre repères dans le jeu avant d’enregistrer.",
+            "校准已取消。": "Calibrage annulé.", "等待游戏前台 · 提示已隐藏": "En attente du jeu au premier plan · Indications masquées",
+            " ＋ 拖动": " + Glisser", "推荐 %@ ↓": "Niveau %@ ↓", "正在游戏对应位置显示提示": "Indications affichées aux emplacements correspondants dans le jeu",
+            "有技能点可用；等待定位＋，可用下方按钮校准位置。": "Un point de compétence est disponible. Recherche des boutons + ; utilisez le calibrage si nécessaire.",
+            "等待升级或海克斯选择 · 平时不显示任何面板": "En attente d’un niveau ou d’un choix d’optimisation · Indications masquées le reste du temps",
+            "校准技能＋": "Calibrer les compétences", "Wexi LoL 游戏提示": "Indications en jeu · Wexi LoL", "等待对局 · 平时不显示提示": "En attente d’une partie · Indications masquées",
+            "选择英雄后加载攻略": "Sélectionnez un champion pour charger le guide", "正在读取 OP.GG 攻略…": "Chargement du guide OP.GG…",
+            "已加载 %d 个海克斯评级 · OP.GG 全球数据": "%d niveaux d’optimisations chargés · Données mondiales OP.GG",
+            "已加载 %d 套出装路线 · OP.GG 全球数据": "%d builds chargés · Données mondiales OP.GG",
+            "攻略加载失败；网络或网页结构可能变化，请重试或查看原网页。": "Échec du chargement du guide. Vérifiez votre connexion, réessayez ou consultez la page source.",
+            "Wexi LoL · 设置": "Wexi LoL · Réglages", "Wexi LoL 设置": "Réglages Wexi LoL", "打开设置": "Ouvrir les réglages",
+            "收起设置到菜单栏": "Réduire les réglages dans la barre des menus", "屏幕录制权限": "Autorisation d’enregistrement de l’écran",
+            "保存技能位置（⌥⌘K）": "Enregistrer les positions (⌥⌘K)", "退出 Wexi LoL": "Quitter Wexi LoL",
+            "快捷键不可用，请使用菜单栏控制。": "Le raccourci clavier n’est pas disponible. Utilisez les commandes de la barre des menus.",
+            "部分快捷键注册失败或已被占用，请使用菜单栏控制。": "Un raccourci n’a pas pu être enregistré ou est déjà utilisé. Utilisez les commandes de la barre des menus.",
+            "Wexi LoL 与 Riot Games 无关联，也不代表 Riot Games 或其官方相关人员的观点。League of Legends、Riot Games 及相关资产是 Riot Games, Inc. 的商标或注册商标。": "Wexi LoL n’est ni approuvé ni affilié à Riot Games et ne reflète pas les opinions de Riot Games ou des personnes officiellement impliquées dans ses produits. League of Legends, Riot Games et les éléments associés sont des marques de Riot Games, Inc.",
+            "OP.GG · 全球": "OP.GG · Monde"
         ],
         .german: [
             "语言": "Sprache", "游戏客户端语言": "Spielclient-Sprache", "跟随 Wexi 语言": "Wexi-Sprache verwenden",
@@ -418,5 +479,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         "退出 Wexi LoL": "Quit Wexi LoL",
         "快捷键不可用，请使用菜单栏控制。": "Keyboard shortcut unavailable. Use the menu bar controls.",
         "部分快捷键注册失败或已被占用，请使用菜单栏控制。": "A keyboard shortcut could not be registered or is already in use. Use the menu bar controls.",
+        "Wexi LoL 与 Riot Games 无关联，也不代表 Riot Games 或其官方相关人员的观点。League of Legends、Riot Games 及相关资产是 Riot Games, Inc. 的商标或注册商标。": "Wexi LoL is not endorsed by or affiliated with Riot Games and does not reflect the views of Riot Games or anyone officially involved with its products. League of Legends, Riot Games, and associated properties are trademarks of Riot Games, Inc.",
+        "OP.GG · 全球": "OP.GG · Global",
     ]
 }

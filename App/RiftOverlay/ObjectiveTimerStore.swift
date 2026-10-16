@@ -7,7 +7,8 @@ import RiftCore
     }
     @Published private(set) var mode = ""
     @Published private(set) var rows: [ObjectiveCountdown] = []
-    @Published private(set) var status = "等待对局数据…"
+    @Published private var statusKey = "等待对局数据…"
+    @Published private var statusCount: Int?
 
     private static let enabledKey = "objectiveTimersEnabled.v1"
     private let live = LiveClient()
@@ -27,6 +28,10 @@ import RiftCore
     }
 
     var isAram: Bool { mode == "ARAM" || mode == "KIWI" }
+    var status: String {
+        if let statusCount { return L10n.text(statusKey, statusCount) }
+        return L10n.text(statusKey)
+    }
     var modeLabel: String {
         if isAram { return L10n.text("大乱斗") }
         if mode == "CLASSIC" { return L10n.text("召唤师峡谷") }
@@ -84,7 +89,7 @@ import RiftCore
             pendingRelicConfirmations = 1
         }
         guard pendingRelicConfirmations >= 2 else {
-            status = L10n.text("正在读取 Tab 计分板…")
+            setStatus("正在读取 Tab 计分板…")
             return
         }
 
@@ -100,7 +105,7 @@ import RiftCore
         }
         relicDeadlines = synchronized
         lastRelicSync = Date()
-        status = L10n.text("已从 Tab 计分板同步 %d 个血包倒计时。", readings.count)
+        setStatus("已从 Tab 计分板同步 %d 个血包倒计时。", count: readings.count)
         refreshDisplay()
     }
 
@@ -126,20 +131,20 @@ import RiftCore
             events = state.events
             playerTeams = state.playerTeams
             if mode == "CLASSIC" {
-                status = L10n.text("史诗野怪使用 Riot 对局事件自动计时。")
+                setStatus("史诗野怪使用 Riot 对局事件自动计时。")
             } else if isAram {
                 if lastRelicSync == nil {
-                    status = L10n.text("按住 Tab 约 1 秒，同步计分板上的血包倒计时。")
+                    setStatus("按住 Tab 约 1 秒，同步计分板上的血包倒计时。")
                 }
             } else {
-                status = L10n.text("当前模式没有启用目标计时。")
+                setStatus("当前模式没有启用目标计时。")
             }
             refreshDisplay()
         } catch {
             guard !Task.isCancelled else { return }
             if Date().timeIntervalSince(sampledAt) >= 4 {
                 reset()
-                status = L10n.text("等待对局数据…")
+                setStatus("等待对局数据…")
             }
         }
     }
@@ -155,6 +160,11 @@ import RiftCore
         pendingRelicConfirmations = 0
         lastRelicSync = nil
         rows = []
+    }
+
+    private func setStatus(_ key: String, count: Int? = nil) {
+        statusKey = key
+        statusCount = count
     }
 
     private func readingsMatch(_ lhs: [HealthRelicTimerReading], _ rhs: [HealthRelicTimerReading]) -> Bool {

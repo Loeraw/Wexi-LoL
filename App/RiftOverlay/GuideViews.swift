@@ -239,7 +239,7 @@ struct GuideControlView: View {
                             Link(L10n.text("OP.GG 海克斯来源 ↗"), destination: guide.sourceURL("augments"))
                         }
                     }.font(.system(size: 11))
-                    Text("Wexi LoL is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc.")
+                    Text(L10n.text("Wexi LoL 与 Riot Games 无关联，也不代表 Riot Games 或其官方相关人员的观点。League of Legends、Riot Games 及相关资产是 Riot Games, Inc. 的商标或注册商标。"))
                         .font(.system(size: 9)).foregroundStyle(.secondary)
                 }.padding(24)
             }.frame(width: 540)
