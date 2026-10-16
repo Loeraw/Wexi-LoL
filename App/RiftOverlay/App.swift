@@ -21,6 +21,9 @@ final class ControlWindow: NSWindow {}
     private var handler: EventHandlerRef?
     private var layoutTimer: Timer?
     private var lastDiagnosticWrite = Date.distantPast
+    private var displayedVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.5.2"
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -57,7 +60,7 @@ final class ControlWindow: NSWindow {}
         }
     }
     @objc private func updateLanguage() {
-        controls.title = L10n.text("Wexi LoL · 设置")
+        controls.title = "Wexi LoL · v\(displayedVersion)"
         statusItem.button?.image = NSImage(systemSymbolName: "waveform.path", accessibilityDescription: L10n.text("Wexi LoL 设置"))
         let menu = NSMenu()
         for (title, action) in [("打开设置", #selector(showControls)), ("收起设置到菜单栏", #selector(minimizeControls)),
