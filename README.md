@@ -2,6 +2,12 @@
 
 海克斯大乱斗的游戏内原位提示助手。没有常驻攻略面板：有技能点时，在推荐技能的「＋」上方提示；海克斯三选一出现时，在各卡片标题上方显示评级。原生 SwiftUI + AppKit，macOS 13+；画面识别需要 macOS 14+。
 
+## 下载
+
+[直接下载 Wexi LoL 0.3.0 DMG](https://github.com/Loeraw/Wexi-LoL/releases/download/v0.3.0/Wexi.LoL-0.3.0.dmg)
+
+当前安装包使用本地 ad-hoc 签名，尚未经过 Apple 公证。macOS 首次打开时可能显示安全提示。
+
 ## 使用
 
 打开 `dist/Wexi LoL.app`。设置窗口可用黄色按钮或 Command-M 收起，从菜单栏波形图标的「打开设置」恢复。
