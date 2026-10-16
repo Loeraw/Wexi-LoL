@@ -171,7 +171,11 @@ struct GuideControlView: View {
                                     }
                                     Spacer()
                                     if guide.championKey == champion.id { Image(systemName: "checkmark").foregroundStyle(guideMint) }
-                                }.padding(9).background(guide.championKey == champion.id ? .white.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: 7))
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(9)
+                                .contentShape(Rectangle())
+                                .background(guide.championKey == champion.id ? .white.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: 7))
                             }.buttonStyle(.plain).disabled(recognition.detectedChampion != nil)
                         }
                     }
