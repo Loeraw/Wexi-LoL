@@ -1,73 +1,162 @@
-# Wexi LoL · macOS / EUW
+# Wexi LoL
 
-海克斯大乱斗的游戏内原位提示助手。没有常驻攻略面板：有技能点时，在推荐技能的「＋」上方提示；海克斯三选一出现时，在各卡片标题上方显示评级。原生 SwiftUI + AppKit，macOS 13+；画面识别需要 macOS 14+。
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-000000?logo=apple)](https://www.apple.com/macos/)
+[![Swift](https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&logoColor=white)](https://www.swift.org/)
+[![Release](https://img.shields.io/github/v/release/Loeraw/Wexi-LoL)](https://github.com/Loeraw/Wexi-LoL/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## 下载
+Wexi LoL 是一款原生 macOS 英雄联盟游戏内辅助悬浮工具，提供海克斯评级、技能加点提示、目标计时、出装推荐和对局玩家资料。
 
-[直接下载 Wexi LoL 0.3.0 DMG](https://github.com/Loeraw/Wexi-LoL/releases/download/v0.3.0/Wexi.LoL-0.3.0.dmg)
+Wexi LoL is a native macOS companion overlay for League of Legends. It provides augment ratings, skill-up suggestions, objective timers, item-build recommendations, and player scouting.
 
-当前安装包使用本地 ad-hoc 签名，尚未经过 Apple 公证。macOS 首次打开时可能显示安全提示。
+## 下载 / Download
 
-## 使用
+<p align="center">
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.3.0/Wexi.LoL-0.3.0.dmg">
+    <img src="https://img.shields.io/badge/DOWNLOAD-LATEST-D2A53A?style=for-the-badge&amp;labelColor=555555" alt="Download latest Wexi LoL DMG">
+  </a>
+</p>
 
-打开 `dist/Wexi LoL.app`。设置窗口可用黄色按钮或 Command-M 收起，从菜单栏波形图标的「打开设置」恢复。
+当前安装包使用本地 ad-hoc 签名，尚未经过 Apple 公证。macOS 首次打开时可能显示安全提示，可前往“系统设置 → 隐私与安全性”选择“仍要打开”。
 
-1. 自动读取本机对局的英雄、等级和 Q/W/E/R 已分配等级。没有技能点、接口失联、攻略加载中或英雄不匹配时不显示加点提示。
-2. 若需要授权，从设置左侧点「开启录屏权限」，或从菜单栏 Wexi LoL 图标打开「屏幕录制权限」；按系统提示开启 Wexi LoL，必要时重新打开助手。OCR 仅捕获前台 LoL 游戏窗口，不保存或上传画面。
-3. 技能位置通过底部区域的小字号 Q/W/E/R 定位，按实际技能间距推算升级按钮行，不再要求读出字面加号。识别不出时，点击「校准技能＋位置」，切回游戏，将四个标记的中心分别拖到对应的＋，按 Option-Command-K 或在菜单栏选择「保存技能位置」。四个标记都移动过后才能保存。位置保存在本机；更改游戏界面缩放后请重新校准。校准后的加点提示不依赖屏幕录制。
-4. 三个准确字典匹配且位置有效的海克斯标题可在首帧显示 S / T1–T5，标签只保留评级。部分匹配或英文模糊匹配仍需连续两帧确认。某张未知或漏识别不会抑制其他已确认卡片；部分匹配要求同排至少两张，单张则还需选择标题。卡片更换、消失、失去游戏焦点或识别过期时清除标签。正常提示全部鼠标穿透，不影响点击＋或卡片；仅校准标记可拖动。
-5. 英雄识别、海克斯识别和游戏内加点提示固定开启，无需勾选。Option-Command-K 开始或保存校准。对局中自动跟随当前英雄，局外可以浏览其他英雄。
-6. 目标计时默认开启。召唤师峡谷会从 Riot 本地事件自动计算小龙、远古巨龙和纳什男爵的刷新，巢虫与先锋显示首次刷新时间。大乱斗中按住 Tab 约 1 秒，应用会读取计分板自带的血包时间并自动校准；关闭计分板后，四个倒计时只显示在小地图中对应的四个血包位置。可在齿轮设置的「目标计时」中关闭。
-7. 推荐出装默认开启。游戏内左上角显示 OP.GG 样本最多的主流三件套、完整路线胜率、选用率和场次；购买核心装备后会匹配兼容路线并标出下一件。海克斯选择和技能校准时暂时隐藏，可在齿轮设置中关闭。
-8. Loading 界面会一次性读取当前 10 名玩家的公开 OP.GG 资料并保存在本局内存缓存；段位、赛季胜率和最近 5 场 W/L 分别显示在对应的 10 张英雄加载卡片内部，按钮可以全部收起并再次展开。进入游戏后立即隐藏，只有系统检测到物理 Tab 正在按住且计分板画面已经展开时，才从缓存显示在计分板两侧；松开 Tab 后立即隐藏，不会再次请求 OP.GG。绿色 W 表示胜利，红色 L 表示失败；可在齿轮设置的「对局玩家」中关闭。
+The current build uses a local ad-hoc signature and has not been notarized by Apple. On first launch, macOS may block the app. Open **System Settings → Privacy & Security** and choose **Open Anyway**.
 
-## 界面语言
+## 功能 / Features
 
-设置窗口左上角的「语言 / Language」可切换简体中文和 English，立即更新设置界面、菜单栏及游戏内提示，无需重启。选择会保存在本机，重新打开后继续使用。默认保留中文。中文模式直接读取 OP.GG 中文版，英文模式直接读取 OP.GG 英文版，所以英雄和海克斯名称与所选语言一致；另一语言的数据在后台作为游戏画面 OCR 别名使用。语言切换不会重置技能校准。
+| 功能 | 中文 | English |
+| --- | --- | --- |
+| 海克斯评级 | 识别三选一海克斯卡片，并在对应位置显示 S / T1–T5 评级 | Recognizes the three augment choices and displays S / T1–T5 ratings in place |
+| 技能加点 | 根据当前英雄、等级和已分配技能点提示下一次 Q/W/E/R 加点 | Suggests the next Q/W/E/R upgrade from the champion, level, and current ranks |
+| 目标计时 | 显示峡谷史诗目标刷新时间，并在大乱斗小地图上显示血包倒计时 | Tracks Rift epic objectives and shows ARAM health-relic countdowns on the minimap |
+| 出装推荐 | 显示 OP.GG 主流三件套、胜率、选用率和下一件装备 | Shows popular OP.GG three-item builds, win rate, pick rate, and the next item |
+| 玩家资料 | Loading 时读取本局 10 名玩家的段位、胜率和最近 5 场 W/L，游戏内按住 Tab 显示缓存 | Loads rank, win rate, and recent W/L for all 10 players during loading, then shows cached data while Tab is held |
+| 中英文界面 | 设置中可即时切换简体中文和 English，并读取对应语言的 OP.GG 数据 | Switches instantly between Simplified Chinese and English and uses matching OP.GG data |
 
-界面文案集中在 `App/RiftOverlay/Localization.swift`。修改源码后使用 Codex 的 Run 按钮，或运行 `./script/build_and_run.sh` 重新编译并启动。
+正常提示窗口支持鼠标穿透，不会阻止点击技能或海克斯卡片。游戏进入后台时，提示会自动隐藏。
 
-## 数据和限制
+Normal overlay hints ignore mouse input, so they do not block skills or augment cards. Hints hide automatically when the game is no longer in the foreground.
 
-- 加点与评级来自 OP.GG 公开英雄页面，使用全球统计，不是 EUW 专属数据。页面结构或网络异常时停止提供对应提示，不编造评级。
-- 出装推荐来自 OP.GG 对应英雄的公开 Items 页面。默认路线按场次选择，胜率对应完整三件套，不表示单件装备的因果效果。
-- 玩家资料使用 Riot 本地 `playerlist` 取得当前对局 Riot ID，再读取 OP.GG EUW 公开召唤师页面。每次对局最多并发读取 3 名玩家，结果在内存缓存 15 分钟；不需要 Riot 或 OP.GG 登录，也不保存玩家身份。进入游戏后资料仍可完成加载，但只在 Tab 计分板展开时显示。
-- 加点先使用来源的逐级顺序，并根据实际已分配等级处理攒点和手动偏离。来源仅有 1–15 级时，常规英雄后续按来源的主副技能优先级、Q/W/E 五级上限和 R 的等级门槛补全。特殊加点英雄不使用这种补全规则。
-- 评级为英雄静态评级，不根据本局装备或已选海克斯重新打分，不显示海克斯胜率。
-- 设置里的参考列表用评级块底色区分稀有度：白银为银色、黄金为金色、棱彩为青紫粉渐变。块内保留 S/T1–T5，名称下方不再重复稀有度文字；悬停及辅助功能标签仍提供稀有度名称。
-- 英雄识别使用本机 HTTPS 127.0.0.1:2999，每轮完成后约 0.6 秒再次查询。只信任打包的 Riot 根证书，验证签名链、有效日期、IP 地址及服务端用途，禁止重定向。游戏长期本地证书使用基础 X.509 策略，不套用公网 TLS 寿命限制。
-- 游戏前台的画面扫描每轮完成后约 0.1 秒再次运行，后台检查间隔为 0.5 秒。仅游戏前台扫描；技能定位不限制模式、不等待海克斯攻略，海克斯识别要求 KIWI 或 ARAM 及对应英雄数据。识别结果超过 2 秒不显示；玩家数据超过 2.5 秒不显示技能建议。位置优先使用实际捕获窗口的坐标，传统窗口列表作为后备；捕获优先选择真正的游戏窗口标题，避免选中同尺寸辅助窗口。优先一次 OCR 读取标题横条；识别不全时最多每秒回退到全图及分栏扫描。已校准且画面比例匹配时跳过技能 OCR，窗口列表缓存一秒。计分板约每 0.35 秒探测一次；玩家名 OCR 成功时按实际行定位资料，失败时按标准五行位置回退。
-- 目标计时每 0.75 秒读取 `gamestats`、`eventdata` 和玩家队伍。Riot 官方事件流只提供 DragonKill、HeraldKill、BaronKill 等史诗目标事件，不提供普通营地击杀或血包拾取。峡谷龙魂归属能由击杀者队伍确认时，远古巨龙使用 6 分钟刷新；大龙使用 6 分钟、小龙使用 5 分钟。大乱斗血包只在玩家按住 Tab 时临时 OCR 游戏内置计时，连续两帧确认后按游戏时间推进，不保存截图。
-- 不读取进程内存、不注入游戏、不自动加点或选卡。技能自动定位要求能识别 Q/W/E/R；自定义按键、缩放、图标形状或 OCR 漏字可能需要手动校准。
-- 用户已实机确认莫德凯撒对局中能看到「推荐 Q ↓」，并确认三张海克斯卡片均显示评级。本机按 2560×1440 游戏画面校准了四个升级箭头；该 HUD 缩放下自动 OCR 技能定位仍不可靠，当前使用已保存的校准位置。此前稳定版已实际匹配到三个不同 ID 并显示标签；本次首帧快速扫描版本已通过测试，实际出现到显示的延迟尚待下一局验证。此验证不代表所有分辨率、缩放、卡片及语言均可可靠识别。
+## 系统要求 / Requirements
 
-本机诊断状态保存在 `~/Library/Application Support/WexiLoL/status.json`，每两秒覆盖更新。仅记录权限、前台状态、攻略加载、推荐技能、窗口编号和识别数量，不记录截图、完整 OCR 文本或玩家身份。切回设置后保留最近一次游戏内检测结果。
+- macOS 13 Ventura 或更新版本 / macOS 13 Ventura or later
+- 画面识别功能需要 macOS 14 或更新版本 / Screen recognition requires macOS 14 or later
+- League of Legends macOS 客户端 / League of Legends for macOS
+- 海克斯、出装和玩家资料需要网络连接 / Internet access for augment, build, and player data
+- Xcode / Swift 5.9 仅在从源码构建时需要 / Xcode and Swift 5.9 are required only when building from source
 
-英文海克斯别名在中文攻略就绪后继续加载，不再阻塞中文评级首次使用。合成 OCR 测试中，标题扫描约 0.07–0.14 秒，旧全图加分栏约 0.24–0.27 秒；此数值不包含实际捕获、轮询及显示延迟。
+## 安装与权限 / Installation and Permissions
 
-海克斯持续扫描，单张重刷、连续重刷和整组替换均使用同一首帧准确匹配规则，不限于第一次出现。新结果为空或尚未确认时清除旧标签，不把旧卡评级套到新卡上。新增的两项重刷状态测试已通过；点击到新评级显示仍包含捕获与 OCR 延迟，未进行真实重刷延迟计时。
+1. 下载并打开 DMG，将 **Wexi LoL.app** 拖入 Applications。
+2. 首次运行时，根据 macOS 提示允许 Wexi LoL 使用屏幕录制权限。
+3. 如果系统阻止启动，请在“系统设置 → 隐私与安全性”中选择“仍要打开”。
+4. 设置窗口可以最小化到程序坞，也可以从菜单栏的 Wexi LoL 图标重新打开。
 
-## 构建与测试
+1. Download and open the DMG, then drag **Wexi LoL.app** into Applications.
+2. On first launch, allow Screen Recording when macOS asks for permission.
+3. If macOS blocks the app, open **System Settings → Privacy & Security** and select **Open Anyway**.
+4. The settings window can be minimized to the Dock or reopened from the Wexi LoL menu-bar icon.
 
-需要 Xcode / Swift 与 macOS SDK，无第三方包依赖。源码在 `App/`；项目构建不依赖聊天项目的同步参考文件。
+屏幕录制只用于读取前台英雄联盟游戏窗口中的技能栏、海克斯选择和 Tab 计分板。应用不会保存或上传截图。
+
+Screen Recording is used only to read the foreground League of Legends window for the skill bar, augment choices, and Tab scoreboard. The app does not save or upload screenshots.
+
+## 使用 / Usage
+
+### 海克斯与技能 / Augments and Skills
+
+- 海克斯三选一出现时，评级标签会显示在对应卡片附近。刷新单张卡片时，未刷新的识别结果会保留。
+- 有可用技能点时，应用会在推荐的 Q/W/E/R 升级位置显示提示。
+- 如果技能位置无法自动识别，可在设置中选择“校准技能＋位置”，拖动四个标记后按 Option-Command-K 保存。
+
+- When three augment choices appear, rating labels are placed near their matching cards. Rerolling one slot preserves the unchanged results.
+- When a skill point is available, the app shows a recommendation over the corresponding Q/W/E/R upgrade position.
+- If automatic skill placement fails, choose **Calibrate skill + positions**, move all four markers, and press Option-Command-K to save.
+
+### 目标计时 / Objective Timers
+
+- 召唤师峡谷使用 Riot 本地事件计算小龙、远古巨龙、先锋和纳什男爵时间。
+- 大乱斗中按住 Tab 约一秒可读取游戏计分板上的血包时间；松开后，倒计时继续显示在小地图中的血包位置。
+
+- On Summoner's Rift, Riot local events are used to calculate dragon, Elder Dragon, Rift Herald, and Baron timers.
+- In ARAM, hold Tab for about one second to read the scoreboard's health-relic timers. After Tab is released, countdowns continue at their minimap locations.
+
+### 对局玩家 / Player Scouting
+
+- Loading 界面只读取一次当前 10 名玩家的公开 OP.GG 资料，并缓存在本局内存中。
+- 进入游戏后资料自动隐藏；只有按住物理 Tab 键时才显示缓存，不会重复请求 OP.GG。
+- 绿色 W 表示胜利，红色 L 表示失败。
+
+- The loading screen fetches public OP.GG profiles for the 10 current players once and keeps them in an in-memory match cache.
+- Profiles hide after the game starts and reappear from cache only while the physical Tab key is held. OP.GG is not requested again.
+- Green **W** means win; red **L** means loss.
+
+## 数据来源与隐私 / Data Sources and Privacy
+
+- 英雄、等级、技能、装备和目标事件来自 Riot 本机游戏接口。
+- 海克斯评级、技能顺序、出装和公开玩家资料来自 OP.GG 公共页面。
+- 玩家资料当前使用 EUW OP.GG 页面；其他服务器的玩家查询可能没有结果。
+- 应用不读取游戏进程内存、不注入游戏、不自动点击、不自动选卡或加点。
+- 玩家资料仅保存在本局内存缓存中，不写入磁盘。
+- 本机诊断状态保存在 `~/Library/Application Support/WexiLoL/status.json`，不包含截图、完整 OCR 文本或玩家身份。
+
+- Champion, level, skill, item, and objective-event data comes from Riot's local game APIs.
+- Augment ratings, skill orders, builds, and public player profiles come from public OP.GG pages.
+- Player scouting currently uses EUW OP.GG pages; lookups for other regions may return no result.
+- The app does not read game-process memory, inject into the game, click automatically, choose augments, or spend skill points.
+- Player profiles remain only in the current match's in-memory cache and are not written to disk.
+- Local diagnostics are stored at `~/Library/Application Support/WexiLoL/status.json` and do not include screenshots, full OCR text, or player identities.
+
+## 从源码构建 / Build from Source
+
+项目使用 Swift Package Manager，没有第三方包依赖。
+
+The project uses Swift Package Manager and has no third-party package dependencies.
 
 ```sh
+git clone https://github.com/Loeraw/Wexi-LoL.git
+cd Wexi-LoL
 ./script/build_and_run.sh --verify
-./script/package_dmg.sh
-./script/package_source.sh
-RIFT_GUIDE_FIXTURE_DIR=/private/tmp CLANG_MODULE_CACHE_PATH="$PWD/.build/clang-cache" swift test --disable-sandbox -Xswiftc -module-cache-path -Xswiftc "$PWD/.build/module-cache"
 ```
 
-48 项测试通过，覆盖加点提示和消失、攒点、后期补点边界、技能坐标匹配、卡片位置与刷新换卡、公开页面解析、英雄身份匹配、目标计时、证书校验及合成图像的真实 Vision OCR。应用当前为本地 ad-hoc 签名开发版本，未公证，不是正式发行产品。
+运行测试 / Run tests:
 
-## 参考
+```sh
+swift test
+```
 
-- [Riot 游戏客户端接口](https://developer.riotgames.com/docs/lol)
-- [OP.GG 海克斯大乱斗](https://op.gg/zh-cn/lol/modes/aram-mayhem)
-- [Apple 基础证书验证策略](https://developer.apple.com/documentation/security/secpolicycreatebasicx509())
+生成 DMG 和源码包 / Build the DMG and source archive:
 
-## 许可证
+```sh
+./script/package_dmg.sh
+./script/package_source.sh
+```
+
+当前测试套件包含 48 项测试，其中两项公共网页冒烟测试需要单独提供本地 fixture。
+
+The current suite contains 48 tests. Two public-page smoke tests require optional local fixtures.
+
+## 已知限制 / Known Limitations
+
+- OP.GG 页面结构改变或网络异常时，对应功能可能暂时不可用。
+- OCR 可靠性会受到游戏分辨率、HUD 缩放、语言和界面变化影响。
+- 评级是英雄的静态统计评级，不会根据本局装备或已选海克斯重新计算。
+- 当前 DMG 未使用 Apple Developer ID 签名或公证。
+- 当前玩家资料查询固定为 EUW。
+
+- OP.GG page changes or network failures may temporarily disable related features.
+- OCR reliability depends on game resolution, HUD scale, language, and UI changes.
+- Ratings are static champion statistics and are not recalculated from the current build or selected augments.
+- The current DMG is not signed with an Apple Developer ID or notarized.
+- Player-profile lookup is currently fixed to EUW.
+
+## 许可证 / License
 
 本项目采用 [MIT License](LICENSE)。
+
+This project is available under the [MIT License](LICENSE).
+
+## 声明 / Disclaimer
+
+Wexi LoL 与 Riot Games 没有隶属、授权或认可关系。League of Legends、Riot Games 及其相关资产属于各自权利人。
 
 Wexi LoL is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
