@@ -59,7 +59,7 @@ public enum AugmentRecognition {
             .lowercased().filter { $0.isLetter || $0.isNumber }
     }
     private static func aliases(_ item: AugmentRating) -> Set<String> {
-        Set([item.name, item.englishName ?? "", item.key.replacingOccurrences(of: "ARAM_", with: "")]
+        Set(([item.name, item.englishName ?? "", item.key.replacingOccurrences(of: "ARAM_", with: "")] + item.alternateNames)
             .map(normalized).filter { $0.count >= 2 })
     }
     public static func match(_ text: String, catalog: [AugmentRating]) -> Int? {
@@ -77,7 +77,13 @@ public enum AugmentRecognition {
     public static func choiceScreenVisible(lines: [RecognizedLine]) -> Bool {
         lines.contains { line in
             let text = normalized(line.text)
-            return line.y > 0.25 && (["选择强化", "选择一个强化", "选择你的强化", "selectanaugment", "chooseanaugment", "chooseyouraugment"].contains { text.contains($0) })
+            let headings = [
+                "选择强化", "選擇增幅裝置", "selectanaugment", "chooseanaugment", "chooseyouraugment",
+                "증강체선택", "오그먼트를선택", "オーグメントを選択", "optimisationchoisir", "choisissezuneoptimisation",
+                "augmentierungauswahlen", "eligeunaumento", "escolhaumaprimoramento", "выберитеусиление",
+                "guclendirmesec", "chọnnângcấp"
+            ]
+            return line.y > 0.25 && headings.contains { text.contains(normalized($0)) }
         }
     }
     public static func hasChoiceEvidence(lines: [RecognizedLine], catalog: [AugmentRating]) -> Bool {

@@ -35,7 +35,8 @@ actor CardScanner {
     private var relicProbeAt = Date.distantPast
 
     @available(macOS 14.0, *)
-    func scan(pid: pid_t, catalog: [AugmentRating], scanSkills: Bool, scanRelics: Bool) async throws -> ScannedHints {
+    func scan(pid: pid_t, catalog: [AugmentRating], recognitionLanguages: [String],
+              scanSkills: Bool, scanRelics: Bool) async throws -> ScannedHints {
         let started = Date()
         let window: SCWindow
         if let cachedWindow, cachedPID == pid, Date().timeIntervalSince(windowUpdatedAt) < 1 {
@@ -66,12 +67,14 @@ actor CardScanner {
         do { image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config) }
         catch { cachedWindow = nil; throw error }
         try Task.checkCancellation()
-        var lines = try GameFrameRecognition.fastCardTitleLines(image: image, catalog: catalog)
+        var lines = try GameFrameRecognition.fastCardTitleLines(image: image, catalog: catalog,
+                                                                 recognitionLanguages: recognitionLanguages)
         var cards = AugmentRecognition.visibleCards(lines: lines, catalog: catalog)
         var usedFallback = false
         if !catalog.isEmpty && cards.count < 3 && Date().timeIntervalSince(fallbackAt) >= 1 {
             fallbackAt = Date(); usedFallback = true
-            lines += try GameFrameRecognition.lines(image: image, catalog: catalog) + GameFrameRecognition.cardTitleLines(image: image, catalog: catalog)
+            lines += try GameFrameRecognition.lines(image: image, catalog: catalog, recognitionLanguages: recognitionLanguages)
+                + GameFrameRecognition.cardTitleLines(image: image, catalog: catalog, recognitionLanguages: recognitionLanguages)
             cards = AugmentRecognition.visibleCards(lines: lines, catalog: catalog)
         }
         let aspect = Double(image.width) / Double(image.height)
@@ -240,7 +243,9 @@ actor CardScanner {
         let key = guide.championKey, version = revision, catalogDate = guide.fetchedAt
         do {
             cardStatus = "正在读取游戏画面…"
-            let result = try await scanner.scan(pid: pid, catalog: catalog, scanSkills: recommendedSkill != nil,
+            let result = try await scanner.scan(pid: pid, catalog: catalog,
+                                                recognitionLanguages: LanguageSettings.shared.gameLanguage.visionLanguages,
+                                                scanSkills: recommendedSkill != nil,
                                                 scanRelics: true)
             guard !Task.isCancelled, revision == version, GameWindow.frontmostPID == pid else { return }
             let validCards = scanCards && !guide.loading && guide.fetchedAt == catalogDate && guide.championKey == key

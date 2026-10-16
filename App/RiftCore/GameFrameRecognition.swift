@@ -3,6 +3,11 @@ import CoreGraphics
 import Vision
 
 public enum GameFrameRecognition {
+    private static func applyLanguages(_ preferred: [String], to request: VNRecognizeTextRequest) {
+        let supported = (try? request.supportedRecognitionLanguages()) ?? []
+        let available = preferred.filter(supported.contains)
+        request.recognitionLanguages = available.isEmpty ? ["en-US"] : available
+    }
     public static func scoreboardLines(image: CGImage) throws -> [RecognizedLine] {
         // The ARAM relic countdown cells sit against the very top edge while
         // Tab is held. Keep the full height; downstream recognition uses the
@@ -94,12 +99,13 @@ public enum GameFrameRecognition {
         return lines
     }
     /// A single small title-strip pass for the common three-card layout.
-    public static func fastCardTitleLines(image: CGImage, catalog: [AugmentRating]) throws -> [RecognizedLine] {
+    public static func fastCardTitleLines(image: CGImage, catalog: [AugmentRating],
+                                          recognitionLanguages: [String] = ["zh-Hans", "en-US"]) throws -> [RecognizedLine] {
         guard !catalog.isEmpty else { return [] }
         let rect = CGRect(x: 0.12 * Double(image.width), y: 0.28 * Double(image.height),
                           width: 0.76 * Double(image.width), height: 0.24 * Double(image.height)).integral
         guard let crop = image.cropping(to: rect) else { return [] }
-        return try lines(image: crop, catalog: catalog).map { line in
+        return try lines(image: crop, catalog: catalog, recognitionLanguages: recognitionLanguages).map { line in
             RecognizedLine(text: line.text,
                            x: (rect.minX + line.x * rect.width) / Double(image.width),
                            y: (Double(image.height) - rect.maxY + line.y * rect.height) / Double(image.height),
@@ -109,14 +115,15 @@ public enum GameFrameRecognition {
     }
     /// Read each choice column separately so small titles are not lost in a
     /// full-frame OCR pass. Coordinates are mapped back to the game window.
-    public static func cardTitleLines(image: CGImage, catalog: [AugmentRating]) throws -> [RecognizedLine] {
+    public static func cardTitleLines(image: CGImage, catalog: [AugmentRating],
+                                     recognitionLanguages: [String] = ["zh-Hans", "en-US"]) throws -> [RecognizedLine] {
         guard !catalog.isEmpty else { return [] }
         var result: [RecognizedLine] = []
         for (left, right) in [(0.12, 0.38), (0.38, 0.62), (0.62, 0.88)] {
             let rect = CGRect(x: left * Double(image.width), y: 0.15 * Double(image.height),
                               width: (right - left) * Double(image.width), height: 0.60 * Double(image.height)).integral
             guard let crop = image.cropping(to: rect) else { continue }
-            let observations = try lines(image: crop, catalog: catalog)
+            let observations = try lines(image: crop, catalog: catalog, recognitionLanguages: recognitionLanguages)
             result += observations.map { line in
                 RecognizedLine(text: line.text,
                                x: (rect.minX + line.x * rect.width) / Double(image.width),
@@ -127,15 +134,18 @@ public enum GameFrameRecognition {
         }
         return result
     }
-    public static func cardIDs(image: CGImage, catalog: [AugmentRating]) throws -> [Int] {
-        AugmentRecognition.cardIDs(lines: try lines(image: image, catalog: catalog), catalog: catalog)
+    public static func cardIDs(image: CGImage, catalog: [AugmentRating],
+                               recognitionLanguages: [String] = ["zh-Hans", "en-US"]) throws -> [Int] {
+        AugmentRecognition.cardIDs(lines: try lines(image: image, catalog: catalog,
+                                                    recognitionLanguages: recognitionLanguages), catalog: catalog)
     }
-    public static func lines(image: CGImage, catalog: [AugmentRating]) throws -> [RecognizedLine] {
+    public static func lines(image: CGImage, catalog: [AugmentRating],
+                             recognitionLanguages: [String] = ["zh-Hans", "en-US"]) throws -> [RecognizedLine] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
-        request.recognitionLanguages = ["zh-Hans", "en-US"]
+        applyLanguages(recognitionLanguages, to: request)
         request.usesLanguageCorrection = false
-        request.customWords = catalog.flatMap { [$0.name, $0.englishName ?? ""] }.filter { !$0.isEmpty }
+        request.customWords = catalog.flatMap { [$0.name, $0.englishName ?? ""] + $0.alternateNames }.filter { !$0.isEmpty }
         request.minimumTextHeight = 0.008
         // No file write or upload: the frame and recognized strings are transient.
         try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])

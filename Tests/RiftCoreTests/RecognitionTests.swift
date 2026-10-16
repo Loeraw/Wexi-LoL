@@ -21,6 +21,14 @@ final class RecognitionTests: XCTestCase {
         XCTAssertNil(AugmentRecognition.match("Gain range with Scopier Weapons", catalog: catalog))
         XCTAssertNil(AugmentRecognition.match("神射法", catalog: catalog))
     }
+    func testLocalizedAlternateNamesMatchTheSameAugment() {
+        var localized = catalog[0]
+        localized.alternateNames = ["万能スコープ", "만능 조준경", "Lunette polyvalente"]
+        let multilingual = [localized] + Array(catalog.dropFirst())
+        XCTAssertEqual(AugmentRecognition.match("万能スコープ", catalog: multilingual), 1)
+        XCTAssertEqual(AugmentRecognition.match("만능 조준경", catalog: multilingual), 1)
+        XCTAssertEqual(AugmentRecognition.match("Lunette polyvalente", catalog: multilingual), 1)
+    }
     func testThreeCardsOrderedByScreenPositionNotTier() {
         XCTAssertEqual(AugmentRecognition.cardIDs(lines: [line("Deft", 0.72), line("Marksmage", 0.26), line("Scopier Weapons", 0.49)], catalog: catalog), [2, 1, 3])
     }

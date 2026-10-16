@@ -90,7 +90,8 @@ private struct GuideCacheEntry {
         let key = championKey
         let selectedMode = mode
         let language = LanguageSettings.shared.selection
-        let cacheKey = "\(language.rawValue):\(selectedMode.rawValue):\(key)"
+        let gameLanguage = LanguageSettings.shared.gameLanguage
+        let cacheKey = "\(language.rawValue):\(gameLanguage.rawValue):\(selectedMode.rawValue):\(key)"
         augments = []; skills = nil; itemBuilds = []; pinned = []; recognized = []; patch = "—"; fetchedAt = nil
         augmentSearch = ""
         loading = true; status = "正在读取 OP.GG 攻略…"
@@ -105,9 +106,9 @@ private struct GuideCacheEntry {
                     date = cache.date; primaryPage = cache.primary
                     skillPage = cache.skills; itemPage = cache.items; augmentPage = cache.augments
                 } else {
-                    async let item = Self.fetch(itemURL)
-                    async let skill = try? Self.fetch(skillURL)
-                    async let augment = selectedMode.supportsAugmentTiers ? (try? Self.fetch(augmentURL)) : nil
+                    async let item = Self.fetch(itemURL, language: language)
+                    async let skill = try? Self.fetch(skillURL, language: language)
+                    async let augment = selectedMode.supportsAugmentTiers ? (try? Self.fetch(augmentURL, language: language)) : nil
                     let fetchedItems = try await item
                     itemPage = fetchedItems; skillPage = await skill; augmentPage = await augment
                     primaryPage = fetchedItems
@@ -134,20 +135,37 @@ private struct GuideCacheEntry {
                     ? "已加载 %d 套出装路线 · OP.GG 全球数据"
                     : "已加载 %d 个海克斯评级 · OP.GG 全球数据"
                 loading = false
-                // Fetch the other locale as an OCR alias after the selected locale
-                // is ready. Visible names always come from the selected OP.GG site.
-                let alternate: AppLanguage = language == .english ? .chinese : .english
-                let alternateURL = Self.sourceURL("augments", champion: key, mode: selectedMode, language: alternate)
-                if selectedMode.supportsAugmentTiers, let augmentPage,
-                   let alternatePage = try? await Self.fetch(alternateURL),
-                   !Task.isCancelled, generation == token, alternatePage.patch == augmentPage.patch {
-                    let names = Dictionary(alternatePage.augments.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+                // Keep the visible guide in the Wexi interface language, while
+                // adding the actual League client locale and English as OCR aliases.
+                if selectedMode.supportsAugmentTiers, let augmentPage {
+                    var aliasesByID: [Int: [String]] = [:]
+                    var englishByID: [Int: String] = [:]
+                    var aliasLanguages: [AppLanguage] = []
+                    for candidate in [gameLanguage, .english] where candidate != language && !aliasLanguages.contains(candidate) {
+                        aliasLanguages.append(candidate)
+                    }
+                    for aliasLanguage in aliasLanguages {
+                        let aliasURL = Self.sourceURL("augments", champion: key, mode: selectedMode, language: aliasLanguage)
+                        guard let aliasPage = try? await Self.fetch(aliasURL, language: aliasLanguage),
+                              aliasPage.patch == augmentPage.patch else { continue }
+                        for item in aliasPage.augments {
+                            aliasesByID[item.id, default: []].append(item.name)
+                            if aliasLanguage == .english { englishByID[item.id] = item.name }
+                        }
+                    }
+                    guard !Task.isCancelled, generation == token else { return }
                     var enriched = augmentPage
                     enriched.augments = augmentPage.augments.map { item in
-                        var copy = item; copy.englishName = names[item.id]; return copy
+                        var copy = item
+                        copy.englishName = englishByID[item.id] ?? item.englishName
+                        copy.alternateNames = Array(Set(item.alternateNames + aliasesByID[item.id, default: []]))
+                            .filter { $0 != item.name }
+                        return copy
                     }
-                    augments = augments.map { item in
-                        var copy = item; copy.englishName = names[item.id]; return copy
+                    augments = enriched.augments.sorted {
+                        if $0.tier != $1.tier { return $0.tier < $1.tier }
+                        if let left = $0.winRate, let right = $1.winRate, left != right { return left > right }
+                        return $0.id < $1.id
                     }
                     cached[cacheKey] = GuideCacheEntry(date: date, primary: primaryPage, skills: skillPage,
                                                        items: itemPage, augments: enriched)
@@ -161,18 +179,17 @@ private struct GuideCacheEntry {
     }
     private nonisolated static func sourceURL(_ section: String, champion: String, mode: GuideMode,
                                               language: AppLanguage) -> URL {
-        let locale = language == .chinese ? "/zh-cn" : ""
+        let locale = language.opggPrefix
         if mode == .ranked {
             return URL(string: "https://op.gg\(locale)/lol/champions/\(champion)/\(section)")!
         }
         return URL(string: "https://op.gg\(locale)/lol/modes/\(mode.rawValue)/\(champion)/\(section)")!
     }
-    private nonisolated static func fetch(_ url: URL) async throws -> GuidePage {
+    private nonisolated static func fetch(_ url: URL, language: AppLanguage) async throws -> GuidePage {
         var request = URLRequest(url: url)
         request.timeoutInterval = 20
-        request.setValue("WexiLoL/0.5", forHTTPHeaderField: "User-Agent")
-        let chinese = url.path.hasPrefix("/zh-cn/")
-        request.setValue(chinese ? "zh-CN,zh;q=0.9" : "en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+        request.setValue("WexiLoL/0.5.1", forHTTPHeaderField: "User-Agent")
+        request.setValue(language.acceptLanguage, forHTTPHeaderField: "Accept-Language")
         // OP.GG stores its last locale in a cookie. A shared session can therefore
         // return Chinese content for the unprefixed English URL after visiting
         // /zh-cn. Keep guide requests stateless so the URL controls the language.

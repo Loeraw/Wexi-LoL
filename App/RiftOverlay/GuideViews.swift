@@ -146,6 +146,7 @@ struct GuideControlView: View {
         .background(guideBackground)
         .preferredColorScheme(.dark)
         .onChange(of: language.selection) { _ in guide.load() }
+        .onChange(of: language.gameSelection) { _ in guide.load() }
     }
 
     private var guidePage: some View {
@@ -274,9 +275,16 @@ struct GuideControlView: View {
 
                 settingsSection(L10n.text("界面")) {
                     Picker(L10n.text("语言"), selection: $language.selection) {
-                        ForEach(AppLanguage.allCases) { option in Text(option.title).tag(option) }
+                        ForEach(AppLanguage.interfaceCases) { option in Text(option.title).tag(option) }
                     }
                     .accessibilityIdentifier("languagePicker")
+                    Picker(L10n.text("游戏客户端语言"), selection: $language.gameSelection) {
+                        Text(L10n.text("跟随 Wexi 语言")).tag("follow")
+                        ForEach(AppLanguage.allCases) { option in Text(option.title).tag(option.rawValue) }
+                    }
+                    .accessibilityIdentifier("gameLanguagePicker")
+                    Text(L10n.text("选择与英雄联盟客户端相同的语言，用于读取海克斯名称。"))
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
                     HStack(spacing: 14) {
                         Text(L10n.text("提示透明度")).frame(width: 90, alignment: .leading)
                         Slider(value: $model.opacity, in: 0.35...1)

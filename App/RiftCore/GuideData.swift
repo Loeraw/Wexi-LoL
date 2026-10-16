@@ -11,15 +11,18 @@ public struct AugmentRating: Identifiable, Equatable, Sendable {
     public let tier: Int
     public let rarity: Int
     public var englishName: String? = nil
+    public var alternateNames: [String] = []
     public let winRate: Double?
     public let pickRate: Double?
     public let games: Int?
 
     public init(id: Int, name: String, key: String, tier: Int, rarity: Int,
                 englishName: String? = nil, winRate: Double? = nil,
-                pickRate: Double? = nil, games: Int? = nil) {
+                pickRate: Double? = nil, games: Int? = nil,
+                alternateNames: [String] = []) {
         self.id = id; self.name = name; self.key = key; self.tier = tier; self.rarity = rarity
         self.englishName = englishName; self.winRate = winRate; self.pickRate = pickRate; self.games = games
+        self.alternateNames = alternateNames
     }
     public var tierLabel: String { tier == 0 ? "S" : "T\(tier)" }
     public var rarityLabel: String {
@@ -27,7 +30,8 @@ public struct AugmentRating: Identifiable, Equatable, Sendable {
     }
     public func matches(_ text: String) -> Bool {
         let normalized: (String) -> String = { $0.lowercased().filter { $0.isLetter || $0.isNumber } }
-        return text.isEmpty || normalized(name).contains(normalized(text)) || normalized(key).contains(normalized(text)) || normalized(englishName ?? "").contains(normalized(text))
+        return text.isEmpty || ([name, key, englishName ?? ""] + alternateNames)
+            .contains { normalized($0).contains(normalized(text)) }
     }
 }
 public struct SkillGuide: Equatable, Sendable {

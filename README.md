@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://www.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-13%2B-000000?logo=apple" alt="macOS 13+"></a>
   <a href="https://www.swift.org/"><img src="https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&amp;logoColor=white" alt="Swift 5.9"></a>
-  <a href="https://github.com/Loeraw/Wexi-LoL/releases/tag/v0.5.0"><img src="https://img.shields.io/badge/release-v0.5.0-D26A3A" alt="Release v0.5.0"></a>
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/tag/v0.5.1"><img src="https://img.shields.io/badge/release-v0.5.1-D26A3A" alt="Release v0.5.1"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
 </p>
 
@@ -24,7 +24,7 @@ Wexi LoL is a native macOS companion overlay for League of Legends. It provides 
 ## 下载 / Download
 
 <p align="center">
-  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.5.0/Wexi.LoL-0.5.0.dmg">
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.5.1/Wexi.LoL-0.5.1.dmg">
     <img src="https://img.shields.io/badge/DOWNLOAD-LATEST-D2A53A?style=for-the-badge&amp;labelColor=555555" alt="Download latest Wexi LoL DMG">
   </a>
 </p>
@@ -43,7 +43,7 @@ The current build uses a local ad-hoc signature and has not been notarized by Ap
 | 出装推荐 | 显示 OP.GG 主流三件套、胜率、选用率和下一件装备 | Shows popular OP.GG three-item builds, win rate, pick rate, and the next item |
 | 模式面板 | 主界面按排位、大乱斗混乱、极地大乱斗和斗魂竞技场分别展示攻略；斗魂海克斯根据胜率与样本生成评级 | Separate guide panels for Ranked, ARAM: Mayhem, ARAM, and Arena; Arena augment tiers are calculated from win rate and sample size |
 | 玩家资料 | 自动识别当前区服，在 Loading 时读取本局 10 名玩家的段位、胜率和最近 5 场 W/L，游戏内按住 Tab 显示缓存 | Auto-detects the current region, loads rank, win rate, and recent W/L for all 10 players during loading, then shows cached data while Tab is held |
-| 中英文界面 | 设置中可即时切换简体中文和 English，并读取对应语言的 OP.GG 数据 | Switches instantly between Simplified Chinese and English and uses matching OP.GG data |
+| 多语言界面与识别 | Wexi 界面可选择 12 种语言；游戏客户端语言可独立选择 15 种，并加载对应 OP.GG 海克斯名称与 Vision OCR | Choose from 12 Wexi interface languages and independently select one of 15 game-client languages for localized OP.GG augment names and Vision OCR |
 
 正常提示窗口支持鼠标穿透，不会阻止点击技能或海克斯卡片。游戏进入后台时，提示会自动隐藏。
 
@@ -80,10 +80,14 @@ Screen Recording is used only to read the foreground League of Legends window fo
 - 海克斯三选一出现时，评级标签会显示在对应卡片附近。刷新单张卡片时，未刷新的识别结果会保留。
 - 有可用技能点时，应用会在推荐的 Q/W/E/R 升级位置显示提示。
 - 如果技能位置无法自动识别，可在设置中选择“校准技能＋位置”，拖动四个标记后按 Option-Command-K 保存。
+- “Wexi 语言”控制应用界面和攻略显示；“游戏客户端语言”应选择与英雄联盟客户端一致的语言，以加载对应海克斯名称供 OCR 匹配。
+- 游戏客户端识别支持简体中文、繁体中文、英语、韩语、日语、法语、德语、西班牙语、葡萄牙语、俄语、土耳其语、波兰语、意大利语、泰语和越南语。
 
 - When three augment choices appear, rating labels are placed near their matching cards. Rerolling one slot preserves the unchanged results.
 - When a skill point is available, the app shows a recommendation over the corresponding Q/W/E/R upgrade position.
 - If automatic skill placement fails, choose **Calibrate skill + positions**, move all four markers, and press Option-Command-K to save.
+- **Wexi language** controls the app interface and guide display. Set **Game client language** to the language used by League so Wexi can load matching augment names for OCR.
+- Game-client recognition supports Simplified Chinese, Traditional Chinese, English, Korean, Japanese, French, German, Spanish, Portuguese, Russian, Turkish, Polish, Italian, Thai, and Vietnamese.
 
 ### 目标计时 / Objective Timers
 
@@ -146,9 +150,9 @@ swift test
 ./script/package_source.sh
 ```
 
-当前测试套件包含 52 项测试，其中三项公共网页冒烟测试需要单独提供本地 fixture。
+当前测试套件包含 53 项测试，其中三项公共网页冒烟测试需要单独提供本地 fixture。
 
-The current suite contains 52 tests. Three public-page smoke tests require optional local fixtures.
+The current suite contains 53 tests. Three public-page smoke tests require optional local fixtures.
 
 ## 已知限制 / Known Limitations
 
