@@ -17,7 +17,7 @@ Wexi LoL 是一款原生 macOS 英雄联盟游戏内辅助悬浮工具，提供�
 Wexi LoL is a native macOS companion overlay for League of Legends. It provides augment ratings, skill-up suggestions, objective timers, item-build recommendations, and player scouting.
 
 <p align="center">
-  <img src="docs/images/wexi-settings.png" alt="Wexi LoL settings window" width="900">
+  <img src="docs/images/wexi-modes-0.5.0.png" alt="Wexi LoL four-mode guide and recommended builds" width="900">
 </p>
 <p align="center"><em>四模式攻略、推荐出装与胜率 / Four-mode guides, recommended builds, and win rates</em></p>
 
