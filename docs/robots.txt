@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://loeraw.github.io/Wexi-LoL/sitemap.xml

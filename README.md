@@ -6,6 +6,7 @@
 <p align="center">英雄联盟 macOS 游戏内辅助悬浮工具</p>
 
 <p align="center">
+  <a href="https://loeraw.github.io/Wexi-LoL/"><img src="https://img.shields.io/badge/Website-Wexi%20LoL-6D28D9" alt="Wexi LoL website"></a>
   <a href="https://www.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-13%2B-000000?logo=apple" alt="macOS 13+"></a>
   <a href="https://www.swift.org/"><img src="https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&amp;logoColor=white" alt="Swift 5.9"></a>
   <a href="https://github.com/Loeraw/Wexi-LoL/releases/tag/v0.5.1"><img src="https://img.shields.io/badge/release-v0.5.1-D26A3A" alt="Release v0.5.1"></a>
@@ -15,6 +16,8 @@
 Wexi LoL 是一款原生 macOS 英雄联盟游戏内辅助悬浮工具，提供海克斯评级、技能加点提示、目标计时、出装推荐和对局玩家资料。
 
 Wexi LoL is a native macOS companion overlay for League of Legends. It provides augment ratings, skill-up suggestions, objective timers, item-build recommendations, and player scouting.
+
+<p align="center"><a href="https://loeraw.github.io/Wexi-LoL/"><strong>官方网站 / Official website</strong></a></p>
 
 <p align="center">
   <img src="docs/images/wexi-modes-0.5.0.png" alt="Wexi LoL four-mode guide and recommended builds" width="900">
