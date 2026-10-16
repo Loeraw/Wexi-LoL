@@ -1,9 +1,16 @@
-# Wexi LoL
+<p align="center">
+  <img src="Assets/Wexi-AppIcon.png" alt="Wexi LoL logo" width="128" height="128">
+</p>
+<h1 align="center">Wexi LoL</h1>
+<p align="center"><strong>League of Legends companion overlay for macOS</strong></p>
+<p align="center">英雄联盟 macOS 游戏内辅助悬浮工具</p>
 
-[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-000000?logo=apple)](https://www.apple.com/macos/)
-[![Swift](https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&logoColor=white)](https://www.swift.org/)
-[![Release](https://img.shields.io/github/v/release/Loeraw/Wexi-LoL)](https://github.com/Loeraw/Wexi-LoL/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+<p align="center">
+  <a href="https://www.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-13%2B-000000?logo=apple" alt="macOS 13+"></a>
+  <a href="https://www.swift.org/"><img src="https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&amp;logoColor=white" alt="Swift 5.9"></a>
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/latest"><img src="https://img.shields.io/github/v/release/Loeraw/Wexi-LoL" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
+</p>
 
 Wexi LoL 是一款原生 macOS 英雄联盟游戏内辅助悬浮工具，提供海克斯评级、技能加点提示、目标计时、出装推荐和对局玩家资料。
 
@@ -12,12 +19,12 @@ Wexi LoL is a native macOS companion overlay for League of Legends. It provides 
 <p align="center">
   <img src="docs/images/wexi-settings.png" alt="Wexi LoL settings window" width="900">
 </p>
-<p align="center"><em>设置界面 / Settings window</em></p>
+<p align="center"><em>四模式攻略、推荐出装与胜率 / Four-mode guides, recommended builds, and win rates</em></p>
 
 ## 下载 / Download
 
 <p align="center">
-  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.4.0/Wexi.LoL-0.4.0.dmg">
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.5.0/Wexi.LoL-0.5.0.dmg">
     <img src="https://img.shields.io/badge/DOWNLOAD-LATEST-D2A53A?style=for-the-badge&amp;labelColor=555555" alt="Download latest Wexi LoL DMG">
   </a>
 </p>

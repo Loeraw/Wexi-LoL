@@ -52,7 +52,7 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     func fetch(riotID: String, region: OPGGRegion) async throws -> SummonerProfile {
         guard let url = SummonerProfileURL.make(riotID: riotID, region: region) else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
-        request.setValue("WexiLoL/0.4", forHTTPHeaderField: "User-Agent")
+        request.setValue("WexiLoL/0.5", forHTTPHeaderField: "User-Agent")
         request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200,
