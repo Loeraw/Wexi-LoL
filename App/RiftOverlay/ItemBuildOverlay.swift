@@ -82,7 +82,7 @@ private struct ItemBuildOverlayView: View {
 
     func update(model: OverlayModel, guide: GuideStore, recognition: AutoRecognition,
                 calibration: SkillCalibration, game: GameSurface?) {
-        guard model.itemBuildEnabled, recognition.isAramMode, !calibration.active,
+        guard model.itemBuildEnabled, !calibration.active,
               recognition.cardHints.isEmpty, recognition.detectedChampion == guide.championKey,
               let build = ItemBuildRecommendation.choose(from: guide.itemBuilds, ownedItemIDs: recognition.ownedItemIDs),
               let game, game.foreground else {

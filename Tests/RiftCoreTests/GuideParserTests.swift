@@ -53,6 +53,23 @@ final class GuideParserTests: XCTestCase {
         XCTAssertEqual(result.itemBuilds[0].games, 1234)
         XCTAssertEqual(result.itemBuilds[0].winRate, 56.7, accuracy: 0.001)
     }
+    func testArenaAugmentsReceiveSampleAdjustedTiersWithinRarity() throws {
+        func augment(_ id: Int, _ name: String, _ rarity: Int, _ winRate: Double, _ games: String) -> [String: Any] {
+            ["id": id, "name": name, "rareity": rarity, "win_rate": winRate,
+             "pick_rate": 10.0, "play": games]
+        }
+        let gold = (0..<10).map { augment($0, "Gold \($0)", 4, 60 - Double($0), "1,000") }
+        let silver = (10..<20).map { augment($0, "Silver \($0)", 1, 55 - Double($0 - 10), "500") }
+        let html = try page(["props": ["query": ["patch": "16.20"],
+                                        "augments": ["4": gold, "1": silver]]])
+        let result = try GuideParser.parse(html)
+        XCTAssertEqual(result.augments.count, 20)
+        XCTAssertEqual(result.augments.first { $0.id == 0 }?.tierLabel, "S")
+        XCTAssertEqual(result.augments.first { $0.id == 9 }?.tierLabel, "T4")
+        XCTAssertEqual(result.augments.first { $0.id == 10 }?.rarity, 1)
+        XCTAssertEqual(result.augments.first { $0.id == 0 }?.winRate, 60)
+        XCTAssertEqual(result.augments.first { $0.id == 0 }?.games, 1_000)
+    }
     func testBuildRecommendationPrefersOwnedPrefixThenSampleSize() throws {
         func build(_ ids: [Int], games: Int) -> ItemBuild {
             ItemBuild(items: ids.map { BuildItem(id: $0, name: "Item \($0)", imageURL: "https://cdn.example/\($0).png") },
@@ -73,5 +90,21 @@ final class GuideParserTests: XCTestCase {
         XCTAssertGreaterThan(augments.champions.count, 100)
         XCTAssertEqual(augments.patch, skills.patch)
         XCTAssertNotNil(skills.skills)
+    }
+    func testFetchedModeItemPagesWhenProvided() throws {
+        guard let path = ProcessInfo.processInfo.environment["RIFT_MODE_FIXTURE_DIR"] else {
+            throw XCTSkip("Set RIFT_MODE_FIXTURE_DIR for multi-mode live-page smoke test")
+        }
+        for mode in ["aram-mayhem", "aram", "arena", "ranked"] {
+            let html = try String(contentsOfFile: path + "/\(mode)-items.html")
+            let page: GuidePage
+            do { page = try GuideParser.parse(html) }
+            catch { XCTFail("\(mode): \(error)"); continue }
+            XCTAssertFalse(page.itemBuilds.isEmpty, mode)
+            XCTAssertNotNil(page.patch, mode)
+        }
+        let arenaAugments = try GuideParser.parse(String(contentsOfFile: path + "/arena-augments.html"))
+        XCTAssertGreaterThan(arenaAugments.augments.count, 20)
+        XCTAssertTrue(arenaAugments.augments.allSatisfy { $0.winRate != nil && $0.games != nil })
     }
 }

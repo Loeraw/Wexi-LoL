@@ -11,6 +11,16 @@ public struct AugmentRating: Identifiable, Equatable, Sendable {
     public let tier: Int
     public let rarity: Int
     public var englishName: String? = nil
+    public let winRate: Double?
+    public let pickRate: Double?
+    public let games: Int?
+
+    public init(id: Int, name: String, key: String, tier: Int, rarity: Int,
+                englishName: String? = nil, winRate: Double? = nil,
+                pickRate: Double? = nil, games: Int? = nil) {
+        self.id = id; self.name = name; self.key = key; self.tier = tier; self.rarity = rarity
+        self.englishName = englishName; self.winRate = winRate; self.pickRate = pickRate; self.games = games
+    }
     public var tierLabel: String { tier == 0 ? "S" : "T\(tier)" }
     public var rarityLabel: String {
         switch rarity { case 1: return "白银"; case 4: return "黄金"; case 8: return "棱彩"; default: return "未知稀有度" }
@@ -98,6 +108,8 @@ public enum GuideParser {
             if let dict = object as? [String: Any] {
                 if let query = dict["query"] as? [String: Any], let patch = query["patch"] as? String,
                    patch.range(of: #"^\d+\.\d+(\.\d+)?$"#, options: .regularExpression) != nil { output.patch = patch }
+                if output.patch == nil, let version = dict["version"] as? String,
+                   version.range(of: #"^\d+\.\d+(\.\d+)?$"#, options: .regularExpression) != nil { output.patch = version }
                 if let champs = dict["champions"] as? [[String: Any]], output.champions.isEmpty {
                     output.champions = champs.compactMap { row in
                         guard let key = row["key"] as? String, let name = row["name"] as? String,
@@ -112,6 +124,23 @@ public enum GuideParser {
                               (0...5).contains(tier), let rarity = row["rarity"] as? Int else { return nil }
                         return AugmentRating(id: id, name: name, key: key, tier: tier, rarity: rarity)
                     }
+                }
+                if let groups = (dict["augments"] as? [String: Any]) ?? (dict["data"] as? [String: Any]),
+                   output.augments.isEmpty {
+                    let candidates = groups.flatMap { rarityKey, value -> [ArenaAugmentCandidate] in
+                        guard let rows = value as? [[String: Any]] else { return [] }
+                        let groupRarity = Int(rarityKey)
+                        return rows.compactMap { row in
+                            guard let id = row["id"] as? Int, let name = row["name"] as? String,
+                                  let rarity = row["rareity"] as? Int ?? groupRarity,
+                                  let winRate = number(row["win_rate"]), (0...100).contains(winRate),
+                                  let pickRate = number(row["pick_rate"]), (0...100).contains(pickRate),
+                                  let games = count(row["play"]), games > 0 else { return nil }
+                            return ArenaAugmentCandidate(id: id, name: name, rarity: rarity,
+                                                         winRate: winRate, pickRate: pickRate, games: games)
+                        }
+                    }
+                    if !candidates.isEmpty { output.augments = rateArenaAugments(candidates) }
                 }
                 if let rows = dict["skill_masteries"] as? [[String: Any]], output.skills == nil,
                    let best = rows.max(by: { ($0["play"] as? Int ?? 0) < ($1["play"] as? Int ?? 0) }),
@@ -153,6 +182,49 @@ public enum GuideParser {
         let items = ids.compactMap { byID[$0] }
         guard items.count == ids.count else { return nil }
         return ItemBuild(items: items, winRate: winRate, pickRate: pickRate, games: games)
+    }
+
+    private struct ArenaAugmentCandidate {
+        let id: Int
+        let name: String
+        let rarity: Int
+        let winRate: Double
+        let pickRate: Double
+        let games: Int
+    }
+
+    /// OP.GG exposes Arena augment win rate, pick rate and sample size, but no
+    /// S/T tier. Rank augments only against others of the same rarity and
+    /// shrink small samples toward that rarity's mean before assigning tiers.
+    private static func rateArenaAugments(_ candidates: [ArenaAugmentCandidate]) -> [AugmentRating] {
+        Dictionary(grouping: candidates, by: \.rarity).values.flatMap { group in
+            let totalGames = group.reduce(0) { $0 + $1.games }
+            let mean = totalGames > 0
+                ? group.reduce(0.0) { $0 + $1.winRate * Double($1.games) } / Double(totalGames)
+                : 50
+            let ranked = group.sorted {
+                adjustedArenaRate($0, mean: mean) > adjustedArenaRate($1, mean: mean)
+            }
+            return ranked.enumerated().map { index, item in
+                let percentile = Double(index) / Double(max(1, ranked.count))
+                let tier: Int
+                switch percentile {
+                case ..<0.10: tier = 0
+                case ..<0.30: tier = 1
+                case ..<0.55: tier = 2
+                case ..<0.80: tier = 3
+                default: tier = 4
+                }
+                return AugmentRating(id: item.id, name: item.name, key: "ARENA_\(item.id)",
+                                     tier: tier, rarity: item.rarity, winRate: item.winRate,
+                                     pickRate: item.pickRate, games: item.games)
+            }
+        }
+    }
+
+    private static func adjustedArenaRate(_ item: ArenaAugmentCandidate, mean: Double) -> Double {
+        let priorGames = 500.0
+        return (item.winRate * Double(item.games) + mean * priorGames) / (Double(item.games) + priorGames)
     }
 
     private static func number(_ value: Any?) -> Double? {

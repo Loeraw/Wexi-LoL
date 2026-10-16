@@ -110,7 +110,7 @@ final class ControlWindow: NSWindow {}
                 "enabled": true, "calibration": calibration.active,
                 "champion": recognition.championStatus, "skills": recognition.skillStatus,
                 "scan": recognition.scanSummary, "capture": recognition.cardStatus,
-                "overlay": model.overlayStatus, "guide": L10n.text(guide.status, guide.augments.count),
+                "overlay": model.overlayStatus, "guide": L10n.text(guide.status, guide.statusCount),
                 "timerMode": objectiveTimers.mode, "timerStatus": objectiveTimers.status,
                 "timers": objectiveTimers.rows.map { ["kind": $0.kind.rawValue, "remaining": $0.remaining, "slot": $0.slot ?? 0] },
                 "itemBuilds": guide.itemBuilds.count, "ownedItems": recognition.ownedItemIDs,

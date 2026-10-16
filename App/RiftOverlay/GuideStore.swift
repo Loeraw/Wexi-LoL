@@ -1,6 +1,43 @@
 import Foundation
 import RiftCore
 
+enum GuideMode: String, CaseIterable, Identifiable, Sendable {
+    case mayhem = "aram-mayhem"
+    case aram
+    case arena
+    case ranked
+
+    var id: String { rawValue }
+    var titleKey: String {
+        switch self {
+        case .mayhem: return "大乱斗混乱"
+        case .aram: return "极地大乱斗"
+        case .arena: return "斗魂竞技场"
+        case .ranked: return "排位模式"
+        }
+    }
+    var supportsAugmentTiers: Bool { self == .mayhem || self == .arena }
+    var hasDerivedAugmentTiers: Bool { self == .arena }
+
+    static func from(liveMode: String) -> GuideMode? {
+        switch liveMode.uppercased() {
+        case "KIWI": return .mayhem
+        case "ARAM": return .aram
+        case "CHERRY": return .arena
+        case "CLASSIC": return .ranked
+        default: return nil
+        }
+    }
+}
+
+private struct GuideCacheEntry {
+    let date: Date
+    let primary: GuidePage
+    let skills: GuidePage?
+    let items: GuidePage?
+    let augments: GuidePage?
+}
+
 @MainActor final class GuideStore: ObservableObject {
     @Published var championKey = "kayle"
     @Published var champions: [ChampionOption] = []
@@ -15,9 +52,15 @@ import RiftCore
     @Published var pinned: [Int] = []
     @Published var recognized: [Int] = []
     @Published var fetchedAt: Date?
+    @Published var mode: GuideMode = .mayhem {
+        didSet {
+            guard mode != oldValue else { return }
+            load()
+        }
+    }
     private var request: Task<Void, Never>?
     private var generation = UUID()
-    private var cached: [String: (Date, GuidePage, GuidePage?, GuidePage?)] = [:]
+    private var cached: [String: GuideCacheEntry] = [:]
 
     func displayName(for champion: ChampionOption) -> String {
         champion.name
@@ -27,13 +70,14 @@ import RiftCore
         champions.filter { championSearch.isEmpty || $0.name.localizedCaseInsensitiveContains(championSearch) || $0.id.localizedCaseInsensitiveContains(championSearch) }
     }
     var matchingAugments: [AugmentRating] { augments.filter { $0.matches(augmentSearch) } }
+    var statusCount: Int { augments.isEmpty ? itemBuilds.count : augments.count }
     var overlayAugments: [AugmentRating] {
         if !recognized.isEmpty { return recognized.compactMap { id in augments.first { $0.id == id } } }
         if !pinned.isEmpty { return pinned.compactMap { id in augments.first { $0.id == id } } }
         return Array(matchingAugments.prefix(6))
     }
     func sourceURL(_ section: String) -> URL {
-        Self.sourceURL(section, champion: championKey, language: LanguageSettings.shared.selection)
+        Self.sourceURL(section, champion: championKey, mode: mode, language: LanguageSettings.shared.selection)
     }
     func pin(_ augment: AugmentRating) {
         if pinned.contains(augment.id) { pinned.removeAll { $0 == augment.id } }
@@ -44,44 +88,58 @@ import RiftCore
         request?.cancel()
         let token = UUID(); generation = token
         let key = championKey
+        let selectedMode = mode
         let language = LanguageSettings.shared.selection
-        let cacheKey = "\(language.rawValue):\(key)"
+        let cacheKey = "\(language.rawValue):\(selectedMode.rawValue):\(key)"
         augments = []; skills = nil; itemBuilds = []; pinned = []; recognized = []; patch = "—"; fetchedAt = nil
         augmentSearch = ""
         loading = true; status = "正在读取 OP.GG 攻略…"
-        let augmentURL = Self.sourceURL("augments", champion: key, language: language)
-        let skillURL = Self.sourceURL("skills", champion: key, language: language)
-        let itemURL = Self.sourceURL("items", champion: key, language: language)
+        let augmentURL = Self.sourceURL("augments", champion: key, mode: selectedMode, language: language)
+        let skillURL = Self.sourceURL("skills", champion: key, mode: selectedMode, language: language)
+        let itemURL = Self.sourceURL("items", champion: key, mode: selectedMode, language: language)
         request = Task {
             do {
-                let augmentPage: GuidePage, skillPage: GuidePage?, itemPage: GuidePage?
+                let primaryPage: GuidePage, augmentPage: GuidePage?, skillPage: GuidePage?, itemPage: GuidePage?
                 let date: Date
-                if !force, let cache = cached[cacheKey], Date().timeIntervalSince(cache.0) < 1800 {
-                    date = cache.0; augmentPage = cache.1; skillPage = cache.2; itemPage = cache.3
+                if !force, let cache = cached[cacheKey], Date().timeIntervalSince(cache.date) < 1800 {
+                    date = cache.date; primaryPage = cache.primary
+                    skillPage = cache.skills; itemPage = cache.items; augmentPage = cache.augments
                 } else {
-                    async let first = Self.fetch(augmentURL)
-                    async let second = try? Self.fetch(skillURL)
-                    async let third = try? Self.fetch(itemURL)
-                    augmentPage = try await first; skillPage = await second; itemPage = await third
+                    async let item = Self.fetch(itemURL)
+                    async let skill = try? Self.fetch(skillURL)
+                    async let augment = selectedMode.supportsAugmentTiers ? (try? Self.fetch(augmentURL)) : nil
+                    let fetchedItems = try await item
+                    itemPage = fetchedItems; skillPage = await skill; augmentPage = await augment
+                    primaryPage = fetchedItems
                     date = Date()
                 }
                 guard !Task.isCancelled, generation == token else { return }
-                guard !augmentPage.augments.isEmpty, augmentPage.patch != nil else {
+                let resolvedPatch = primaryPage.patch ?? itemPage?.patch ?? skillPage?.patch ?? augmentPage?.patch
+                guard resolvedPatch != nil, !(itemPage?.itemBuilds ?? []).isEmpty else {
                     throw GuideParseError.pageStructureChanged
                 }
-                cached[cacheKey] = (date, augmentPage, skillPage, itemPage)
-                champions = augmentPage.champions
-                augments = augmentPage.augments.sorted { $0.tier < $1.tier || ($0.tier == $1.tier && $0.id < $1.id) }
-                skills = skillPage?.patch == augmentPage.patch ? skillPage?.skills : nil
-                itemBuilds = itemPage?.patch == augmentPage.patch ? (itemPage?.itemBuilds ?? []) : []
-                patch = augmentPage.patch ?? "—"; fetchedAt = date
-                status = "已加载 %d 个海克斯评级 · OP.GG 全球数据"
+                cached[cacheKey] = GuideCacheEntry(date: date, primary: primaryPage, skills: skillPage,
+                                                   items: itemPage, augments: augmentPage)
+                champions = [primaryPage, itemPage, skillPage, augmentPage]
+                    .compactMap { $0 }.first { !$0.champions.isEmpty }?.champions ?? champions
+                augments = (augmentPage?.augments ?? []).sorted {
+                    if $0.tier != $1.tier { return $0.tier < $1.tier }
+                    if let left = $0.winRate, let right = $1.winRate, left != right { return left > right }
+                    return $0.id < $1.id
+                }
+                skills = skillPage?.skills
+                itemBuilds = itemPage?.itemBuilds ?? []
+                patch = resolvedPatch ?? "—"; fetchedAt = date
+                status = augments.isEmpty
+                    ? "已加载 %d 套出装路线 · OP.GG 全球数据"
+                    : "已加载 %d 个海克斯评级 · OP.GG 全球数据"
                 loading = false
                 // Fetch the other locale as an OCR alias after the selected locale
                 // is ready. Visible names always come from the selected OP.GG site.
                 let alternate: AppLanguage = language == .english ? .chinese : .english
-                let alternateURL = Self.sourceURL("augments", champion: key, language: alternate)
-                if let alternatePage = try? await Self.fetch(alternateURL),
+                let alternateURL = Self.sourceURL("augments", champion: key, mode: selectedMode, language: alternate)
+                if selectedMode.supportsAugmentTiers, let augmentPage,
+                   let alternatePage = try? await Self.fetch(alternateURL),
                    !Task.isCancelled, generation == token, alternatePage.patch == augmentPage.patch {
                     let names = Dictionary(alternatePage.augments.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
                     var enriched = augmentPage
@@ -91,7 +149,8 @@ import RiftCore
                     augments = augments.map { item in
                         var copy = item; copy.englishName = names[item.id]; return copy
                     }
-                    cached[cacheKey] = (date, enriched, skillPage, itemPage)
+                    cached[cacheKey] = GuideCacheEntry(date: date, primary: primaryPage, skills: skillPage,
+                                                       items: itemPage, augments: enriched)
                 }
             } catch {
                 guard !Task.isCancelled, generation == token else { return }
@@ -100,9 +159,13 @@ import RiftCore
             }
         }
     }
-    private nonisolated static func sourceURL(_ section: String, champion: String, language: AppLanguage) -> URL {
+    private nonisolated static func sourceURL(_ section: String, champion: String, mode: GuideMode,
+                                              language: AppLanguage) -> URL {
         let locale = language == .chinese ? "/zh-cn" : ""
-        return URL(string: "https://op.gg\(locale)/lol/modes/aram-mayhem/\(champion)/\(section)")!
+        if mode == .ranked {
+            return URL(string: "https://op.gg\(locale)/lol/champions/\(champion)/\(section)")!
+        }
+        return URL(string: "https://op.gg\(locale)/lol/modes/\(mode.rawValue)/\(champion)/\(section)")!
     }
     private nonisolated static func fetch(_ url: URL) async throws -> GuidePage {
         var request = URLRequest(url: url)

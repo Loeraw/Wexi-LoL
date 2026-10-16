@@ -175,9 +175,17 @@ actor CardScanner {
                     self.ownedItemIDs = result.itemIDs
                     self.playerUpdatedAt = Date()
                     self.championStatus = "已识别 \(result.key) · 等级 \(result.level) · \(result.mode)"
-                    if guide.championKey != result.key {
+                    let championChanged = guide.championKey != result.key
+                    let detectedGuideMode = GuideMode.from(liveMode: result.mode)
+                    let modeChanged = detectedGuideMode.map { guide.mode != $0 } ?? false
+                    if championChanged {
                         self.resetCards()
                         guide.championKey = result.key
+                    }
+                    if let detectedGuideMode, modeChanged {
+                        self.resetCards()
+                        guide.mode = detectedGuideMode
+                    } else if championChanged {
                         guide.load()
                     }
                 } catch {
@@ -225,7 +233,7 @@ actor CardScanner {
         guard let pid = GameWindow.frontmostPID else { cardStatus = "当前在游戏外，已暂停；下方保留最近一次游戏内检测结果"; resetCards(); return }
         // HUD localization is independent of mode, hero lookup and augment downloads.
         // Practice Tool can use the same skill guidance to test placement.
-        let scanCards = (mode == "KIWI" || mode == "ARAM") &&
+        let scanCards = (mode == "KIWI" || mode == "ARAM" || mode == "CHERRY") &&
             detectedChampion == guide.championKey && !guide.loading && !guide.augments.isEmpty
         let catalog = scanCards ? guide.augments : []
         let isAram = mode == "KIWI" || mode == "ARAM"

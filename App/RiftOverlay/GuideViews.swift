@@ -3,6 +3,37 @@ import RiftCore
 
 private let guideMint = Color(red: 0.40, green: 0.91, blue: 0.77)
 private let guideBackground = Color(red: 0.055, green: 0.075, blue: 0.095)
+private let modePurple = Color(red: 0.39, green: 0.16, blue: 0.91)
+
+private struct GuideBuildRow: View {
+    let build: ItemBuild
+
+    var body: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 6) {
+                ForEach(build.items) { item in
+                    AsyncImage(url: URL(string: item.imageURL)) { phase in
+                        if let image = phase.image { image.resizable().scaledToFill() }
+                        else { Image(systemName: "shippingbox.fill").foregroundStyle(.secondary) }
+                    }
+                    .frame(width: 34, height: 34)
+                    .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .help(item.name)
+                }
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(L10n.text("胜率 %.1f%%", build.winRate))
+                    .font(.system(size: 12, weight: .bold, design: .rounded)).foregroundStyle(guideMint)
+                Text(L10n.text("选用率 %.1f%% · %d 场", build.pickRate, build.games))
+                    .font(.system(size: 9)).foregroundStyle(.secondary)
+            }
+        }
+        .padding(10)
+        .background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 9))
+    }
+}
 
 struct SkillOrderView: View {
     @ObservedObject private var language = LanguageSettings.shared
@@ -50,7 +81,13 @@ struct AugmentRow: View {
                 .background(LinearGradient(colors: rarityColors, startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 8))
                 .help(L10n.text(augment.rarityLabel))
                 .accessibilityLabel(L10n.text("%@，评级 %@", L10n.text(augment.rarityLabel), augment.tierLabel))
-            Text(augment.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(augment.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
+                if let winRate = augment.winRate, let pickRate = augment.pickRate, let games = augment.games {
+                    Text(L10n.text("胜率 %.1f%% · 选用率 %.1f%% · %d 场", winRate, pickRate, games))
+                        .font(.system(size: 9)).foregroundStyle(.secondary)
+                }
+            }
             Spacer()
             if pinned { Image(systemName: "pin.fill").foregroundStyle(guideMint) }
         }
@@ -112,7 +149,10 @@ struct GuideControlView: View {
     }
 
     private var guidePage: some View {
-        HStack(alignment: .top, spacing: 0) {
+        VStack(spacing: 0) {
+            modeTabs
+            Divider()
+            HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 12) {
                 Text(L10n.text("英雄")).font(.headline)
                 TextField(L10n.text("搜索英雄："), text: $guide.championSearch).textFieldStyle(.roundedBorder)
@@ -149,36 +189,82 @@ struct GuideControlView: View {
                         if guide.loading { ProgressView().controlSize(.small) }
                         Button(L10n.text("刷新")) { guide.load(force: true) }.disabled(guide.loading)
                     }
-                    Text(L10n.text(guide.status, guide.augments.count)).font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text(L10n.text(guide.status, guide.statusCount)).font(.system(size: 11)).foregroundStyle(.secondary)
                     if let date = guide.fetchedAt {
                         Text(L10n.text("获取时间 %@", date.formatted(.dateTime.year().month(.abbreviated).day().hour().minute().locale(language.selection.locale))))
                             .font(.system(size: 10)).foregroundStyle(.secondary)
                     }
-                    if let skills = guide.skills { SkillOrderView(guide: skills).padding(16).background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12)) }
-                    HStack {
-                        Text(L10n.text("海克斯评级")).font(.title3.bold())
-                        Spacer()
-                        Text(L10n.text("参考列表")).font(.caption).foregroundStyle(.secondary)
+                    if !guide.itemBuilds.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text(L10n.text("推荐出装")).font(.title3.bold())
+                                Spacer()
+                                Text(L10n.text("按场次排序")).font(.caption).foregroundStyle(.secondary)
+                            }
+                            ForEach(Array(guide.itemBuilds.prefix(4).enumerated()), id: \.offset) { _, build in
+                                GuideBuildRow(build: build)
+                            }
+                        }
+                        .padding(16)
+                        .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
                     }
-                    TextField(L10n.text("搜索海克斯："), text: $guide.augmentSearch).textFieldStyle(.roundedBorder)
-                    Text(L10n.text("下方是当前英雄的静态评级。游戏内只标注识别到的三张卡片，不显示常驻列表。"))
-                        .font(.system(size: 11)).foregroundStyle(.secondary)
-                    LazyVStack(spacing: 5) {
-                        ForEach(guide.matchingAugments) { augment in
-                            AugmentRow(augment: augment)
-                                .padding(8).background(.white.opacity(0.025), in: RoundedRectangle(cornerRadius: 9))
+                    if let skills = guide.skills { SkillOrderView(guide: skills).padding(16).background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12)) }
+                    if guide.mode.supportsAugmentTiers {
+                        HStack {
+                            Text(L10n.text("海克斯评级")).font(.title3.bold())
+                            Spacer()
+                            Text(L10n.text("参考列表")).font(.caption).foregroundStyle(.secondary)
+                        }
+                        TextField(L10n.text("搜索海克斯："), text: $guide.augmentSearch).textFieldStyle(.roundedBorder)
+                        Text(L10n.text("下方是当前英雄的静态评级。游戏内只标注识别到的三张卡片，不显示常驻列表。"))
+                            .font(.system(size: 11)).foregroundStyle(.secondary)
+                        if guide.mode.hasDerivedAugmentTiers {
+                            Label(L10n.text("斗魂评级根据同稀有度海克斯的 OP.GG 胜率与场次计算，并非 OP.GG 官方分级。"),
+                                  systemImage: "chart.bar.xaxis")
+                                .font(.system(size: 10)).foregroundStyle(.secondary)
+                        }
+                        LazyVStack(spacing: 5) {
+                            ForEach(guide.matchingAugments) { augment in
+                                AugmentRow(augment: augment)
+                                    .padding(8).background(.white.opacity(0.025), in: RoundedRectangle(cornerRadius: 9))
+                            }
                         }
                     }
                     Divider()
                     HStack {
+                        Link(L10n.text("OP.GG 出装来源 ↗"), destination: guide.sourceURL("items"))
                         Link(L10n.text("OP.GG 加点来源 ↗"), destination: guide.sourceURL("skills"))
-                        Link(L10n.text("OP.GG 海克斯来源 ↗"), destination: guide.sourceURL("augments"))
+                        if guide.mode.supportsAugmentTiers {
+                            Link(L10n.text("OP.GG 海克斯来源 ↗"), destination: guide.sourceURL("augments"))
+                        }
                     }.font(.system(size: 11))
                     Text("Wexi LoL is not endorsed by Riot Games and does not reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games and all associated properties are trademarks or registered trademarks of Riot Games, Inc.")
                         .font(.system(size: 9)).foregroundStyle(.secondary)
                 }.padding(24)
             }.frame(width: 540)
+            }
         }
+    }
+
+    private var modeTabs: some View {
+        HStack(spacing: 0) {
+            ForEach(GuideMode.allCases) { option in
+                Button {
+                    guide.mode = option
+                } label: {
+                    Text(L10n.text(option.titleKey))
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(maxWidth: .infinity, minHeight: 42)
+                        .background(guide.mode == option ? modePurple : .white.opacity(0.07))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white.opacity(guide.mode == option ? 1 : 0.88))
+                .accessibilityIdentifier("mode.\(option.rawValue)")
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
     }
 
     private var settingsPage: some View {

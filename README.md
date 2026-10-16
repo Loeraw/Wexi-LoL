@@ -34,6 +34,7 @@ The current build uses a local ad-hoc signature and has not been notarized by Ap
 | 技能加点 | 根据当前英雄、等级和已分配技能点提示下一次 Q/W/E/R 加点 | Suggests the next Q/W/E/R upgrade from the champion, level, and current ranks |
 | 目标计时 | 显示峡谷史诗目标刷新时间，并在大乱斗小地图上显示血包倒计时 | Tracks Rift epic objectives and shows ARAM health-relic countdowns on the minimap |
 | 出装推荐 | 显示 OP.GG 主流三件套、胜率、选用率和下一件装备 | Shows popular OP.GG three-item builds, win rate, pick rate, and the next item |
+| 模式面板 | 主界面按排位、大乱斗混乱、极地大乱斗和斗魂竞技场分别展示攻略；斗魂海克斯根据胜率与样本生成评级 | Separate guide panels for Ranked, ARAM: Mayhem, ARAM, and Arena; Arena augment tiers are calculated from win rate and sample size |
 | 玩家资料 | 自动识别当前区服，在 Loading 时读取本局 10 名玩家的段位、胜率和最近 5 场 W/L，游戏内按住 Tab 显示缓存 | Auto-detects the current region, loads rank, win rate, and recent W/L for all 10 players during loading, then shows cached data while Tab is held |
 | 中英文界面 | 设置中可即时切换简体中文和 English，并读取对应语言的 OP.GG 数据 | Switches instantly between Simplified Chinese and English and uses matching OP.GG data |
 
@@ -138,9 +139,9 @@ swift test
 ./script/package_source.sh
 ```
 
-当前测试套件包含 50 项测试，其中两项公共网页冒烟测试需要单独提供本地 fixture。
+当前测试套件包含 52 项测试，其中三项公共网页冒烟测试需要单独提供本地 fixture。
 
-The current suite contains 50 tests. Two public-page smoke tests require optional local fixtures.
+The current suite contains 52 tests. Three public-page smoke tests require optional local fixtures.
 
 ## 已知限制 / Known Limitations
 
