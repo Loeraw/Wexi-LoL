@@ -107,7 +107,7 @@ import RiftCore
     private nonisolated static func fetch(_ url: URL) async throws -> GuidePage {
         var request = URLRequest(url: url)
         request.timeoutInterval = 20
-        request.setValue("WexiLoL/0.3 (local personal prototype)", forHTTPHeaderField: "User-Agent")
+        request.setValue("WexiLoL/0.4", forHTTPHeaderField: "User-Agent")
         let chinese = url.path.hasPrefix("/zh-cn/")
         request.setValue(chinese ? "zh-CN,zh;q=0.9" : "en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
         // OP.GG stores its last locale in a cookie. A shared session can therefore

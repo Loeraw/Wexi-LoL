@@ -1,5 +1,50 @@
 import Foundation
 
+public enum OPGGRegion: String, CaseIterable, Codable, Sendable {
+    case na, me, euw, eune, oce, kr, jp, br, las, lan, ru, tr, sea, tw, vn
+
+    public var displayName: String { rawValue.uppercased() }
+
+    public static func from(platformID: String) -> OPGGRegion? {
+        switch platformID.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() {
+        case "NA", "NA1": return .na
+        case "ME", "ME1": return .me
+        case "EUW", "EUW1": return .euw
+        case "EUNE", "EUN1": return .eune
+        case "OCE", "OC1": return .oce
+        case "KR": return .kr
+        case "JP", "JP1": return .jp
+        case "BR", "BR1": return .br
+        case "LAS", "LA2": return .las
+        case "LAN", "LA1": return .lan
+        case "RU": return .ru
+        case "TR", "TR1": return .tr
+        case "SEA", "SG2", "PH2", "TH2": return .sea
+        case "TW", "TW2": return .tw
+        case "VN", "VN2": return .vn
+        default: return nil
+        }
+    }
+
+    public static func inferred(fromRiotID riotID: String) -> OPGGRegion? {
+        guard let hash = riotID.lastIndex(of: "#"), hash < riotID.index(before: riotID.endIndex) else { return nil }
+        return from(platformID: String(riotID[riotID.index(after: hash)...]))
+    }
+}
+
+public enum SummonerProfileURL {
+    public static func make(riotID: String, region: OPGGRegion) -> URL? {
+        guard let hash = riotID.lastIndex(of: "#"), hash != riotID.startIndex,
+              hash < riotID.index(before: riotID.endIndex) else { return nil }
+        let gameName = riotID[..<hash]
+        let tag = riotID[riotID.index(after: hash)...]
+        let slug = "\(gameName)-\(tag)"
+        return URL(string: "https://op.gg/lol/summoners")?
+            .appendingPathComponent(region.rawValue)
+            .appendingPathComponent(slug)
+    }
+}
+
 public enum RecentMatchResult: String, Equatable, Sendable {
     case win = "WIN"
     case loss = "LOSE"

@@ -17,7 +17,7 @@ Wexi LoL is a native macOS companion overlay for League of Legends. It provides 
 ## 下载 / Download
 
 <p align="center">
-  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.3.0/Wexi.LoL-0.3.0.dmg">
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.4.0/Wexi.LoL-0.4.0.dmg">
     <img src="https://img.shields.io/badge/DOWNLOAD-LATEST-D2A53A?style=for-the-badge&amp;labelColor=555555" alt="Download latest Wexi LoL DMG">
   </a>
 </p>
@@ -34,7 +34,7 @@ The current build uses a local ad-hoc signature and has not been notarized by Ap
 | 技能加点 | 根据当前英雄、等级和已分配技能点提示下一次 Q/W/E/R 加点 | Suggests the next Q/W/E/R upgrade from the champion, level, and current ranks |
 | 目标计时 | 显示峡谷史诗目标刷新时间，并在大乱斗小地图上显示血包倒计时 | Tracks Rift epic objectives and shows ARAM health-relic countdowns on the minimap |
 | 出装推荐 | 显示 OP.GG 主流三件套、胜率、选用率和下一件装备 | Shows popular OP.GG three-item builds, win rate, pick rate, and the next item |
-| 玩家资料 | Loading 时读取本局 10 名玩家的段位、胜率和最近 5 场 W/L，游戏内按住 Tab 显示缓存 | Loads rank, win rate, and recent W/L for all 10 players during loading, then shows cached data while Tab is held |
+| 玩家资料 | 自动识别当前区服，在 Loading 时读取本局 10 名玩家的段位、胜率和最近 5 场 W/L，游戏内按住 Tab 显示缓存 | Auto-detects the current region, loads rank, win rate, and recent W/L for all 10 players during loading, then shows cached data while Tab is held |
 | 中英文界面 | 设置中可即时切换简体中文和 English，并读取对应语言的 OP.GG 数据 | Switches instantly between Simplified Chinese and English and uses matching OP.GG data |
 
 正常提示窗口支持鼠标穿透，不会阻止点击技能或海克斯卡片。游戏进入后台时，提示会自动隐藏。
@@ -88,10 +88,12 @@ Screen Recording is used only to read the foreground League of Legends window fo
 ### 对局玩家 / Player Scouting
 
 - Loading 界面只读取一次当前 10 名玩家的公开 OP.GG 资料，并缓存在本局内存中。
+- 应用会自动读取英雄联盟客户端的区服；如果未能识别，可在设置中手动选择 NA、ME、EUW、EUNE、OCE、KR、JP、BR、LAS、LAN、RU、TR、SEA、TW 或 VN。
 - 进入游戏后资料自动隐藏；只有按住物理 Tab 键时才显示缓存，不会重复请求 OP.GG。
 - 绿色 W 表示胜利，红色 L 表示失败。
 
 - The loading screen fetches public OP.GG profiles for the 10 current players once and keeps them in an in-memory match cache.
+- The app detects the League client region automatically. If detection is unavailable, Settings lets you choose NA, ME, EUW, EUNE, OCE, KR, JP, BR, LAS, LAN, RU, TR, SEA, TW, or VN manually.
 - Profiles hide after the game starts and reappear from cache only while the physical Tab key is held. OP.GG is not requested again.
 - Green **W** means win; red **L** means loss.
 
@@ -99,14 +101,14 @@ Screen Recording is used only to read the foreground League of Legends window fo
 
 - 英雄、等级、技能、装备和目标事件来自 Riot 本机游戏接口。
 - 海克斯评级、技能顺序、出装和公开玩家资料来自 OP.GG 公共页面。
-- 玩家资料当前使用 EUW OP.GG 页面；其他服务器的玩家查询可能没有结果。
+- 玩家资料会根据自动识别或手动选择的区服访问对应的 OP.GG 页面。
 - 应用不读取游戏进程内存、不注入游戏、不自动点击、不自动选卡或加点。
 - 玩家资料仅保存在本局内存缓存中，不写入磁盘。
 - 本机诊断状态保存在 `~/Library/Application Support/WexiLoL/status.json`，不包含截图、完整 OCR 文本或玩家身份。
 
 - Champion, level, skill, item, and objective-event data comes from Riot's local game APIs.
 - Augment ratings, skill orders, builds, and public player profiles come from public OP.GG pages.
-- Player scouting currently uses EUW OP.GG pages; lookups for other regions may return no result.
+- Player scouting uses the OP.GG page for the automatically detected or manually selected region.
 - The app does not read game-process memory, inject into the game, click automatically, choose augments, or spend skill points.
 - Player profiles remain only in the current match's in-memory cache and are not written to disk.
 - Local diagnostics are stored at `~/Library/Application Support/WexiLoL/status.json` and do not include screenshots, full OCR text, or player identities.
@@ -136,9 +138,9 @@ swift test
 ./script/package_source.sh
 ```
 
-当前测试套件包含 48 项测试，其中两项公共网页冒烟测试需要单独提供本地 fixture。
+当前测试套件包含 50 项测试，其中两项公共网页冒烟测试需要单独提供本地 fixture。
 
-The current suite contains 48 tests. Two public-page smoke tests require optional local fixtures.
+The current suite contains 50 tests. Two public-page smoke tests require optional local fixtures.
 
 ## 已知限制 / Known Limitations
 
@@ -146,13 +148,11 @@ The current suite contains 48 tests. Two public-page smoke tests require optiona
 - OCR 可靠性会受到游戏分辨率、HUD 缩放、语言和界面变化影响。
 - 评级是英雄的静态统计评级，不会根据本局装备或已选海克斯重新计算。
 - 当前 DMG 未使用 Apple Developer ID 签名或公证。
-- 当前玩家资料查询固定为 EUW。
 
 - OP.GG page changes or network failures may temporarily disable related features.
 - OCR reliability depends on game resolution, HUD scale, language, and UI changes.
 - Ratings are static champion statistics and are not recalculated from the current build or selected augments.
 - The current DMG is not signed with an Apple Developer ID or notarized.
-- Player-profile lookup is currently fixed to EUW.
 
 ## 许可证 / License
 

@@ -81,7 +81,7 @@ struct GuideControlView: View {
                 } else {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Wexi LoL").font(.system(size: 24, weight: .bold))
-                        Text(L10n.text("EUW · 游戏原位提示设置")).font(.system(size: 11)).foregroundStyle(.secondary)
+                        Text(L10n.text("全球区服 · 游戏原位提示设置")).font(.system(size: 11)).foregroundStyle(.secondary)
                     }
                 }
                 Spacer()
@@ -243,6 +243,19 @@ struct GuideControlView: View {
 
                 settingsSection(L10n.text("对局玩家")) {
                     Toggle(L10n.text("显示玩家段位与战绩"), isOn: $model.playerScoutEnabled)
+                    Picker(L10n.text("玩家区服"), selection: $lobbyScout.regionPreference) {
+                        Text(L10n.text("自动检测")).tag("auto")
+                        ForEach(OPGGRegion.allCases, id: \.rawValue) { region in
+                            Text(region.displayName).tag(region.rawValue)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    HStack {
+                        Text(L10n.text("当前玩家区服"))
+                        Spacer()
+                        Text(lobbyScout.activeRegion?.displayName ?? L10n.text("等待检测"))
+                            .foregroundStyle(.secondary)
+                    }
                     Text(L10n.text("Loading 阶段只读取一次玩家资料并保存在本局缓存；进入游戏后按住 Tab 只切换显示，不会重新请求 OP.GG。"))
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                     Text(lobbyScout.status).font(.system(size: 11)).foregroundStyle(.secondary)

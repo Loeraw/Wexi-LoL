@@ -115,6 +115,7 @@ final class ControlWindow: NSWindow {}
                 "timers": objectiveTimers.rows.map { ["kind": $0.kind.rawValue, "remaining": $0.remaining, "slot": $0.slot ?? 0] },
                 "itemBuilds": guide.itemBuilds.count, "ownedItems": recognition.ownedItemIDs,
                 "playerScout": lobbyScout.status, "scoutPlayers": lobbyScout.rows.count,
+                "playerRegion": lobbyScout.activeRegion?.rawValue ?? "auto",
                 "scoreboardVisible": recognition.isScoreboardVisible,
                 "recommendation": recognition.recommendedSkill ?? "none",
                 "anchors": recognition.skillAnchors.mapValues { ["x": $0.x, "y": $0.y] },

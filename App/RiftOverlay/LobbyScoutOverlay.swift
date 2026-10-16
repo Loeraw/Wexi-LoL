@@ -119,7 +119,7 @@ private struct LobbyScoutView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(L10n.text("当前对局玩家")).font(.system(size: 14, weight: .bold))
-                Text("OP.GG · EUW").font(.system(size: 9)).foregroundStyle(.secondary)
+                Text("OP.GG · Global").font(.system(size: 9)).foregroundStyle(.secondary)
                 Spacer()
                 Text(status).font(.system(size: 9)).foregroundStyle(.secondary)
                 Button(action: toggle) {
@@ -231,37 +231,16 @@ private struct InGameScoutView: View {
 private struct LoadingScoutCardsView: View {
     let rows: [LobbyPlayerRow]
     let opacity: Double
-    let collapsed: Bool
-    let toggle: () -> Void
 
     var body: some View {
-        if collapsed {
-            Button(action: toggle) {
-                Label(L10n.text("显示玩家资料"), systemImage: "person.2.fill")
-                    .font(.system(size: 11, weight: .semibold))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color.black.opacity(0.9 * opacity), in: RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.16), lineWidth: 1))
+        GeometryReader { proxy in
+            ForEach(rows) { row in
+                InGamePlayerBadge(row: row)
+                    .opacity(opacity)
+                    .position(position(for: row, size: proxy.size))
             }
-            .buttonStyle(.plain).foregroundStyle(.white.opacity(0.94))
-        } else {
-            GeometryReader { proxy in
-                ForEach(rows) { row in
-                    InGamePlayerBadge(row: row)
-                        .opacity(opacity)
-                        .position(position(for: row, size: proxy.size))
-                }
-                Button(action: toggle) {
-                    Label(L10n.text("隐藏玩家资料"), systemImage: "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
-                        .padding(.horizontal, 10).padding(.vertical, 6)
-                        .background(Color.black.opacity(0.82 * opacity), in: RoundedRectangle(cornerRadius: 7))
-                }
-                .buttonStyle(.plain).foregroundStyle(.white.opacity(0.92))
-                .position(x: proxy.size.width - 78, y: 28)
-            }
-            .preferredColorScheme(.dark)
         }
+        .preferredColorScheme(.dark)
     }
 
     private func position(for row: LobbyPlayerRow, size: CGSize) -> CGPoint {
@@ -277,15 +256,37 @@ private struct LoadingScoutCardsView: View {
     }
 }
 
+private struct LoadingScoutControlView: View {
+    let collapsed: Bool
+    let opacity: Double
+    let toggle: () -> Void
+
+    var body: some View {
+        Button(action: toggle) {
+            Label(L10n.text(collapsed ? "显示玩家资料" : "隐藏玩家资料"),
+                  systemImage: collapsed ? "person.2.fill" : "chevron.down")
+                .font(.system(size: 11, weight: .semibold))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.opacity(0.84 * opacity), in: RoundedRectangle(cornerRadius: 7))
+                .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.white.opacity(0.16), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.white.opacity(0.94))
+        .preferredColorScheme(.dark)
+    }
+}
+
 @MainActor final class LobbyScoutOverlayController {
     private var panel: LobbyScoutPanel?
+    private var controlPanel: LobbyScoutPanel?
     private var signature = ""
+    private var controlSignature = ""
     private var collapsed = false
     private var matchKey = ""
 
     func update(model: OverlayModel, store: LobbyScoutStore, recognition: AutoRecognition, game: GameSurface?) {
         guard model.playerScoutEnabled, !store.rows.isEmpty, let game, game.foreground else {
-            panel?.orderOut(nil); return
+            hide(); return
         }
         let showLoading = store.isLoadingScreen
         // Player profiles and their layout are cached during loading. In game,
@@ -293,7 +294,7 @@ private struct LoadingScoutCardsView: View {
         // never hide and re-show the cached panel while Tab remains held.
         let tabIsHeld = CGEventSource.keyState(.combinedSessionState, key: 48)
         let showScoreboard = store.isInGame && tabIsHeld
-        guard showLoading || showScoreboard else { panel?.orderOut(nil); return }
+        guard showLoading || showScoreboard else { hide(); return }
         let currentMatchKey = store.rows.map(\.riotID).joined(separator: "|")
         if currentMatchKey != matchKey {
             matchKey = currentMatchKey; collapsed = false
@@ -308,8 +309,7 @@ private struct LoadingScoutCardsView: View {
                 ))
             } else {
                 panel.contentView = NSHostingView(rootView: LoadingScoutCardsView(
-                    rows: store.rows, opacity: model.opacity, collapsed: collapsed,
-                    toggle: { [weak self] in self?.toggle() }
+                    rows: store.rows, opacity: model.opacity
                 ))
             }
         }
@@ -317,32 +317,61 @@ private struct LoadingScoutCardsView: View {
         // full game window. macOS visibleFrame excludes the Dock and shifts the
         // lower row upward by roughly 90 points.
         let bounds = game.frame
-        let size = (showScoreboard || !collapsed) ? bounds.size : NSSize(width: 132, height: 34)
-        let x = (showScoreboard || !collapsed) ? bounds.minX : bounds.minX + 18
-        let y = (showScoreboard || !collapsed) ? bounds.minY : bounds.minY + 54
-        let frame = NSRect(x: x, y: y, width: size.width, height: size.height)
-        panel.level = NSWindow.Level(rawValue: max(Int(CGShieldingWindowLevel()) + 2, game.layer + 2))
+        let level = NSWindow.Level(rawValue: max(Int(CGShieldingWindowLevel()) + 2, game.layer + 2))
+        let frame = NSRect(origin: bounds.origin, size: bounds.size)
+        panel.level = level
         if panel.frame != frame { panel.setFrame(frame, display: true) }
         panel.alphaValue = model.opacity
-        panel.ignoresMouseEvents = showScoreboard
-        panel.orderFrontRegardless()
+        panel.ignoresMouseEvents = true
+        if showScoreboard || !collapsed { panel.orderFrontRegardless() }
+        else { panel.orderOut(nil) }
+
+        if showLoading {
+            let control = controlPanel ?? makeControlPanel()
+            let nextControlSignature = "\(collapsed):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
+            if controlSignature != nextControlSignature {
+                controlSignature = nextControlSignature
+                control.contentView = NSHostingView(rootView: LoadingScoutControlView(
+                    collapsed: collapsed, opacity: model.opacity,
+                    toggle: { [weak self] in self?.toggle() }
+                ))
+            }
+            let controlFrame = NSRect(x: bounds.maxX - 158, y: bounds.maxY - 46, width: 140, height: 32)
+            control.level = NSWindow.Level(rawValue: level.rawValue + 1)
+            if control.frame != controlFrame { control.setFrame(controlFrame, display: true) }
+            control.alphaValue = model.opacity
+            control.orderFrontRegardless()
+        } else {
+            controlPanel?.orderOut(nil)
+        }
     }
 
-    func hide() { panel?.orderOut(nil) }
+    func hide() { panel?.orderOut(nil); controlPanel?.orderOut(nil) }
 
     private func toggle() {
         collapsed.toggle()
-        signature = ""
+        signature = ""; controlSignature = ""
     }
 
     private func makePanel() -> LobbyScoutPanel {
         let panel = LobbyScoutPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = false
         panel.isFloatingPanel = true; panel.hidesOnDeactivate = false; panel.isReleasedWhenClosed = false
-        panel.ignoresMouseEvents = false; panel.animationBehavior = .none
+        panel.ignoresMouseEvents = true; panel.animationBehavior = .none
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .canJoinAllApplications]
         panel.title = L10n.text("Wexi LoL 当前对局玩家")
         self.panel = panel
+        return panel
+    }
+
+    private func makeControlPanel() -> LobbyScoutPanel {
+        let panel = LobbyScoutPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = false
+        panel.isFloatingPanel = true; panel.hidesOnDeactivate = false; panel.isReleasedWhenClosed = false
+        panel.ignoresMouseEvents = false; panel.animationBehavior = .none
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .canJoinAllApplications]
+        panel.title = L10n.text("Wexi LoL 当前对局玩家")
+        self.controlPanel = panel
         return panel
     }
 }

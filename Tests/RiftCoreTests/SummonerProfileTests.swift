@@ -2,6 +2,27 @@ import XCTest
 @testable import RiftCore
 
 final class SummonerProfileTests: XCTestCase {
+    func testGlobalRegionMapping() {
+        let expected: [String: OPGGRegion] = [
+            "NA1": .na, "ME1": .me, "EUW1": .euw, "EUN1": .eune,
+            "OC1": .oce, "KR": .kr, "JP1": .jp, "BR1": .br,
+            "LA2": .las, "LA1": .lan, "RU": .ru, "TR1": .tr,
+            "SG2": .sea, "PH2": .sea, "TH2": .sea, "TW2": .tw, "VN2": .vn
+        ]
+        for (platform, region) in expected {
+            XCTAssertEqual(OPGGRegion.from(platformID: platform), region, platform)
+        }
+        XCTAssertNil(OPGGRegion.from(platformID: "PBE1"))
+        XCTAssertEqual(OPGGRegion.inferred(fromRiotID: "Player#NA1"), .na)
+        XCTAssertNil(OPGGRegion.inferred(fromRiotID: "Player#custom"))
+    }
+
+    func testGlobalProfileURLUsesSelectedRegionAndEscapesRiotID() {
+        let url = SummonerProfileURL.make(riotID: "Name With Space#NA1", region: .na)
+        XCTAssertEqual(url?.absoluteString, "https://op.gg/lol/summoners/na/Name%20With%20Space-NA1")
+        XCTAssertNil(SummonerProfileURL.make(riotID: "missing-tag", region: .kr))
+    }
+
     func testParsesRankAndRecentResultsFromJSONLD() throws {
         let json: [String: Any] = ["@context": "https://schema.org", "@graph": [
             ["@type": "ProfilePage", "description": "Palarun#EUW's current SOLORANKED rank is emerald 2 Division 2 6 LP with 68 wins, 48 losses, and a 59% win rate."],
