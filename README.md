@@ -115,14 +115,14 @@ Screen Recording is used only to read the foreground League of Legends window fo
 ## 数据来源与隐私 / Data Sources and Privacy
 
 - 英雄、等级、技能、装备和目标事件来自 Riot 本机游戏接口。
-- 海克斯评级、技能顺序、出装和公开玩家资料来自 OP.GG 公共页面。
+- 海克斯评级、技能顺序、出装和公开玩家资料来自 [OP.GG](https://op.gg/) 公共页面。
 - 玩家资料会根据自动识别或手动选择的区服访问对应的 OP.GG 页面。
 - 应用不读取游戏进程内存、不注入游戏、不自动点击、不自动选卡或加点。
 - 玩家资料仅保存在本局内存缓存中，不写入磁盘。
 - 本机诊断状态保存在 `~/Library/Application Support/WexiLoL/status.json`，不包含截图、完整 OCR 文本或玩家身份。
 
 - Champion, level, skill, item, and objective-event data comes from Riot's local game APIs.
-- Augment ratings, skill orders, builds, and public player profiles come from public OP.GG pages.
+- Augment ratings, skill orders, builds, and public player profiles come from public [OP.GG](https://op.gg/) pages.
 - Player scouting uses the OP.GG page for the automatically detected or manually selected region.
 - The app does not read game-process memory, inject into the game, click automatically, choose augments, or spend skill points.
 - Player profiles remain only in the current match's in-memory cache and are not written to disk.
@@ -168,6 +168,16 @@ The current suite contains 53 tests. Three public-page smoke tests require optio
 - OCR reliability depends on game resolution, HUD scale, language, and UI changes.
 - Ratings are static champion statistics and are not recalculated from the current build or selected augments.
 - The current DMG is not signed with an Apple Developer ID or notarized.
+
+## 致谢与数据归属 / Credits and Data Attribution
+
+Wexi LoL 的海克斯评级、技能顺序、推荐出装、胜率以及公开玩家资料以 [OP.GG](https://op.gg/) 公共页面提供的数据为来源。感谢 OP.GG 为英雄联盟玩家社区提供统计数据与对局信息。
+
+OP.GG 名称、品牌及相关内容归其各自权利人所有。Wexi LoL 是独立的开源项目，与 OP.GG 不存在隶属、合作、赞助、授权或认可关系。
+
+Wexi LoL uses data available from public [OP.GG](https://op.gg/) pages for augment ratings, skill orders, recommended builds, win rates, and public player profiles. We thank OP.GG for providing statistics and match information to the League of Legends community.
+
+The OP.GG name, brand, and related content belong to their respective owners. Wexi LoL is an independent open-source project and is not affiliated with, partnered with, sponsored by, authorized by, or endorsed by OP.GG.
 
 ## 许可证 / License
 
