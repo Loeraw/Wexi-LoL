@@ -9,7 +9,7 @@ STAGING="$(mktemp -d "${TMPDIR:-/tmp}/wexilol-source.XXXXXX")"
 trap 'rm -rf "$STAGING"' EXIT
 
 mkdir -p "$ROOT_DIR/dist" "$STAGING/$PACKAGE_NAME/script"
-for ITEM in App Assets Tests Package.swift README.md LICENSE .gitignore; do
+for ITEM in App Assets Tests docs Package.swift README.md LICENSE .gitignore; do
     ditto "$ROOT_DIR/$ITEM" "$STAGING/$PACKAGE_NAME/$ITEM"
 done
 for SCRIPT in build_and_run.sh package_dmg.sh package_source.sh; do
