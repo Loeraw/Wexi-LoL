@@ -1,0 +1,140 @@
+import Foundation
+import RiftCore
+
+struct LobbyPlayerRow: Identifiable, Equatable, Sendable {
+    let riotID: String
+    let champion: String
+    let team: String
+    var profile: SummonerProfile?
+    var failed = false
+    var id: String { riotID }
+}
+
+private final class OPGGSummonerClient: @unchecked Sendable {
+    private let session: URLSession
+
+    init() {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.httpShouldSetCookies = false
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        configuration.timeoutIntervalForRequest = 15
+        configuration.timeoutIntervalForResource = 20
+        session = URLSession(configuration: configuration)
+    }
+
+    deinit { session.invalidateAndCancel() }
+
+    func fetch(riotID: String) async throws -> SummonerProfile {
+        guard let hash = riotID.lastIndex(of: "#"), hash != riotID.startIndex,
+              hash < riotID.index(before: riotID.endIndex) else { throw URLError(.badURL) }
+        let gameName = riotID[..<hash]
+        let tag = riotID[riotID.index(after: hash)...]
+        let slug = "\(gameName)-\(tag)"
+        let url = URL(string: "https://op.gg/lol/summoners/euw")!.appendingPathComponent(slug)
+        var request = URLRequest(url: url)
+        request.setValue("WexiLoL/0.3 (local personal prototype)", forHTTPHeaderField: "User-Agent")
+        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200,
+              let html = String(data: data, encoding: .utf8) else { throw URLError(.badServerResponse) }
+        return try SummonerProfileParser.parse(html)
+    }
+}
+
+@MainActor final class LobbyScoutStore: ObservableObject {
+    @Published private(set) var rows: [LobbyPlayerRow] = []
+    @Published private(set) var status = "等待加载界面的玩家名单…"
+    @Published private(set) var gameTime: Double = .infinity
+
+    private let live = LiveClient()
+    private let client = OPGGSummonerClient()
+    private var pollTask: Task<Void, Never>?
+    private var fetchTask: Task<Void, Never>?
+    private var matchSignature = ""
+    private var cache: [String: (Date, SummonerProfile)] = [:]
+
+    var isLoadingScreen: Bool { !rows.isEmpty && gameTime.isFinite && gameTime <= 1 }
+    var isInGame: Bool { !rows.isEmpty && gameTime.isFinite && gameTime > 1 }
+
+    func start() {
+        pollTask?.cancel()
+        pollTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                await self.poll()
+                do { try await Task.sleep(nanoseconds: 350_000_000) } catch { return }
+            }
+        }
+    }
+
+    func stop() {
+        pollTask?.cancel(); fetchTask?.cancel()
+        pollTask = nil; fetchTask = nil
+        rows = []; matchSignature = ""; gameTime = .infinity
+    }
+
+    private func poll() async {
+        do {
+            let state = try await live.lobbyState()
+            guard !Task.isCancelled else { return }
+            gameTime = state.game.gameTime
+            let players = state.players.compactMap { player -> LobbyPlayerRow? in
+                guard let riotID = player.riotId, riotID.contains("#") else { return nil }
+                return LobbyPlayerRow(riotID: riotID, champion: player.championName,
+                                      team: player.team ?? "", profile: nil)
+            }
+            guard players.count >= 2 else { return }
+            // The ten Riot IDs define the match cache. Champion labels can be
+            // represented differently after loading; they must not trigger a
+            // second OP.GG fetch when the live game begins.
+            let signature = players.map { "\($0.team):\($0.riotID)" }.joined(separator: "|")
+            if signature != matchSignature {
+                matchSignature = signature
+                fetchTask?.cancel()
+                rows = players.map { player in
+                    var copy = player
+                    if let cached = cache[player.riotID], Date().timeIntervalSince(cached.0) < 900 { copy.profile = cached.1 }
+                    return copy
+                }
+                status = L10n.text("正在读取玩家资料 0/%d…", rows.count)
+                fetchTask = Task { [weak self] in await self?.fetchProfiles(signature: signature) }
+            }
+        } catch {
+            guard !Task.isCancelled else { return }
+            if !gameTime.isFinite { status = L10n.text("等待加载界面的玩家名单…") }
+        }
+    }
+
+    private func fetchProfiles(signature: String) async {
+        let pending = rows.filter { $0.profile == nil }.map(\.riotID)
+        var completed = rows.count - pending.count
+        for start in stride(from: 0, to: pending.count, by: 3) {
+            guard !Task.isCancelled, matchSignature == signature else { return }
+            let batch = Array(pending[start..<min(start + 3, pending.count)])
+            await withTaskGroup(of: (String, Result<SummonerProfile, Error>).self) { group in
+                for riotID in batch {
+                    group.addTask { [client] in
+                        do { return (riotID, .success(try await client.fetch(riotID: riotID))) }
+                        catch { return (riotID, .failure(error)) }
+                    }
+                }
+                for await (riotID, result) in group {
+                    guard !Task.isCancelled, matchSignature == signature,
+                          let index = rows.firstIndex(where: { $0.riotID == riotID }) else { continue }
+                    switch result {
+                    case .success(let profile):
+                        rows[index].profile = profile
+                        cache[riotID] = (Date(), profile)
+                    case .failure:
+                        rows[index].failed = true
+                    }
+                    completed += 1
+                    status = L10n.text("正在读取玩家资料 %d/%d…", completed, rows.count)
+                }
+            }
+        }
+        if !Task.isCancelled, matchSignature == signature {
+            status = L10n.text(gameTime > 1 ? "玩家资料已读取 · 按 Tab 显示" : "玩家资料已读取 · 进入游戏后按 Tab 显示")
+        }
+    }
+}

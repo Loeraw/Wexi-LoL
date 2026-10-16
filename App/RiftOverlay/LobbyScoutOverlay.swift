@@ -1,0 +1,348 @@
+import AppKit
+import SwiftUI
+import RiftCore
+
+private final class LobbyScoutPanel: NSPanel {
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
+}
+
+@MainActor private func localizedRankTier(_ tier: String) -> String {
+    guard LanguageSettings.shared.selection == .chinese else { return L10n.text(tier) }
+    return [
+        "IRON": "黑铁", "BRONZE": "青铜", "SILVER": "白银", "GOLD": "黄金",
+        "PLATINUM": "铂金", "EMERALD": "翡翠", "DIAMOND": "钻石",
+        "MASTER": "大师", "GRANDMASTER": "宗师", "CHALLENGER": "王者"
+    ][tier] ?? tier
+}
+
+private struct LobbyPlayerView: View {
+    let row: LobbyPlayerRow
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Text(row.champion).font(.system(size: 10, weight: .semibold)).foregroundStyle(.white.opacity(0.68))
+                .lineLimit(1).frame(width: 62, alignment: .leading)
+            Text(row.riotID).font(.system(size: 11, weight: .medium)).lineLimit(1)
+                .frame(width: 126, alignment: .leading)
+            if let profile = row.profile {
+                Text(rank(profile)).font(.system(size: 10, weight: .semibold)).lineLimit(1)
+                    .frame(width: 86, alignment: .leading)
+                Text(profile.winRate.map { String(format: "%.0f%%", $0) } ?? "—")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(rateColor(profile.winRate)).frame(width: 36, alignment: .trailing)
+                recent(profile.recent)
+            } else if row.failed {
+                Text(L10n.text("无公开数据")).font(.system(size: 10)).foregroundStyle(.secondary)
+                Spacer()
+            } else {
+                ProgressView().controlSize(.mini)
+                Text(L10n.text("读取中…")).font(.system(size: 10)).foregroundStyle(.secondary)
+                Spacer()
+            }
+        }
+        .frame(height: 27)
+    }
+
+    private func rank(_ profile: SummonerProfile) -> String {
+        guard profile.tier != "UNRANKED" else { return L10n.text("未定级") }
+        let parts = profile.tier.split(separator: " ")
+        let tier = parts.first.map { localizedRankTier(String($0)) } ?? profile.tier
+        let division = parts.dropFirst().joined(separator: " ")
+        let lp = profile.leaguePoints.map { " · \($0) LP" } ?? ""
+        return tier + (division.isEmpty ? "" : " \(division)") + lp
+    }
+
+    private func rateColor(_ rate: Double?) -> Color {
+        guard let rate else { return .secondary }
+        if rate >= 55 { return .mint }
+        if rate < 48 { return .red.opacity(0.9) }
+        return .white.opacity(0.82)
+    }
+
+    @ViewBuilder private func recent(_ values: [RecentMatchResult]) -> some View {
+        HStack(spacing: 3) {
+            ForEach(Array(values.prefix(5).enumerated()), id: \.offset) { _, value in
+                Text(value == .win ? "W" : value == .loss ? "L" : "–")
+                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .frame(width: 14, height: 14)
+                    .background(value == .win ? Color.green.opacity(0.8) : value == .loss ? Color.red.opacity(0.8) : Color.gray.opacity(0.7), in: RoundedRectangle(cornerRadius: 3))
+            }
+            if values.isEmpty { Text("—").font(.system(size: 10)).foregroundStyle(.secondary) }
+        }
+        .frame(width: 86, alignment: .leading)
+    }
+}
+
+private struct LobbyTeamView: View {
+    let title: String
+    let color: Color
+    let rows: [LobbyPlayerRow]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Circle().fill(color).frame(width: 7, height: 7)
+                Text(title).font(.system(size: 11, weight: .bold)).foregroundStyle(color)
+                Spacer()
+                Text(L10n.text("段位 · 赛季胜率 · 最近战绩"))
+                    .font(.system(size: 9)).foregroundStyle(.secondary)
+            }
+            ForEach(rows) { LobbyPlayerView(row: $0) }
+        }
+        .frame(width: 410)
+    }
+}
+
+private struct LobbyScoutView: View {
+    let rows: [LobbyPlayerRow]
+    let status: String
+    let opacity: Double
+    let collapsed: Bool
+    let toggle: () -> Void
+
+    var body: some View {
+        if collapsed {
+            Button(action: toggle) {
+                Label(L10n.text("显示玩家资料"), systemImage: "person.2.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .padding(.horizontal, 10).padding(.vertical, 7)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black.opacity(0.90 * opacity), in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.16), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.white.opacity(0.9))
+            .preferredColorScheme(.dark)
+        } else {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(L10n.text("当前对局玩家")).font(.system(size: 14, weight: .bold))
+                Text("OP.GG · EUW").font(.system(size: 9)).foregroundStyle(.secondary)
+                Spacer()
+                Text(status).font(.system(size: 9)).foregroundStyle(.secondary)
+                Button(action: toggle) {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10, weight: .bold)).frame(width: 22, height: 18)
+                        .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 5))
+                }
+                .buttonStyle(.plain).help(L10n.text("隐藏玩家资料"))
+            }
+            HStack(alignment: .top, spacing: 16) {
+                LobbyTeamView(title: L10n.text("蓝方"), color: .cyan,
+                              rows: rows.filter { $0.team == "ORDER" })
+                Divider().frame(height: 150)
+                LobbyTeamView(title: L10n.text("红方"), color: .red.opacity(0.9),
+                              rows: rows.filter { $0.team != "ORDER" })
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .frame(width: 866, height: 190)
+        .foregroundStyle(.white.opacity(0.92))
+        .background(Color.black.opacity(0.90 * opacity), in: RoundedRectangle(cornerRadius: 11))
+        .overlay(RoundedRectangle(cornerRadius: 11).stroke(Color.white.opacity(0.14), lineWidth: 1))
+        .preferredColorScheme(.dark)
+        }
+    }
+}
+
+private struct InGamePlayerBadge: View {
+    let row: LobbyPlayerRow
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            if let profile = row.profile {
+                HStack(spacing: 5) {
+                    Text(shortRank(profile))
+                    Text(profile.winRate.map { String(format: "%.0f%%", $0) } ?? "—")
+                        .foregroundStyle(rateColor(profile.winRate))
+                }
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                HStack(spacing: 5) {
+                    ForEach(Array(profile.recent.prefix(5).enumerated()), id: \.offset) { _, value in
+                        Text(value == .win ? "W" : value == .loss ? "L" : "–")
+                            .font(.system(size: 12, weight: .heavy, design: .rounded))
+                            .foregroundStyle(value == .win ? Color.green : value == .loss ? Color.red : Color.gray)
+                    }
+                    if profile.recent.isEmpty { Text("—").foregroundStyle(.secondary) }
+                }
+            } else if row.failed {
+                Text(L10n.text("无公开数据")).font(.system(size: 12, weight: .medium))
+            } else {
+                Text(L10n.text("读取中…")).font(.system(size: 12, weight: .medium))
+            }
+        }
+        .padding(.horizontal, 9).padding(.vertical, 6)
+        .frame(width: 164, height: 50, alignment: .leading)
+        .foregroundStyle(.white.opacity(0.94))
+        .background(Color.black.opacity(0.82), in: RoundedRectangle(cornerRadius: 6))
+        .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.18), lineWidth: 1))
+    }
+
+    private func shortRank(_ profile: SummonerProfile) -> String {
+        guard profile.tier != "UNRANKED" else { return L10n.text("未定级") }
+        let parts = profile.tier.split(separator: " ")
+        let tier = parts.first.map { localizedRankTier(String($0)) } ?? profile.tier
+        let division = parts.dropFirst().joined(separator: " ")
+        return tier + (division.isEmpty ? "" : " \(division)")
+    }
+
+    private func rateColor(_ rate: Double?) -> Color {
+        guard let rate else { return .secondary }
+        if rate >= 55 { return .green }
+        if rate < 48 { return .red }
+        return .white.opacity(0.9)
+    }
+}
+
+private struct InGameScoutView: View {
+    let rows: [LobbyPlayerRow]
+    let anchors: [String: HintAnchor]
+    let opacity: Double
+
+    var body: some View {
+        GeometryReader { proxy in
+            ForEach(rows) { row in
+                InGamePlayerBadge(row: row)
+                    .opacity(opacity)
+                    .position(position(for: row, size: proxy.size))
+            }
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private func position(for row: LobbyPlayerRow, size: CGSize) -> CGPoint {
+        let teamRows = rows.filter { $0.team == row.team }
+        let index = teamRows.firstIndex(where: { $0.riotID == row.riotID }) ?? 0
+        // Measured from the current 2560×1440 ARAM scoreboard. The layout is
+        // normalized, so the same row spacing scales with the game window.
+        let fallbackVisionY = 0.682 - Double(index) * 0.070
+        let visionY = anchors[row.riotID]?.y ?? fallbackVisionY
+        // Leave the left column where it was already aligned. Put the right
+        // column beyond the scoreboard's augment slots while retaining a
+        // comfortable margin from the game-window edge.
+        let fallbackX = size.width * (row.team == "ORDER" ? 0.105 : 0.910)
+        let x = anchors[row.riotID].map { size.width * $0.x } ?? fallbackX
+        return CGPoint(x: x, y: size.height * (1 - visionY))
+    }
+}
+
+private struct LoadingScoutCardsView: View {
+    let rows: [LobbyPlayerRow]
+    let opacity: Double
+    let collapsed: Bool
+    let toggle: () -> Void
+
+    var body: some View {
+        if collapsed {
+            Button(action: toggle) {
+                Label(L10n.text("显示玩家资料"), systemImage: "person.2.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.black.opacity(0.9 * opacity), in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.white.opacity(0.16), lineWidth: 1))
+            }
+            .buttonStyle(.plain).foregroundStyle(.white.opacity(0.94))
+        } else {
+            GeometryReader { proxy in
+                ForEach(rows) { row in
+                    InGamePlayerBadge(row: row)
+                        .opacity(opacity)
+                        .position(position(for: row, size: proxy.size))
+                }
+                Button(action: toggle) {
+                    Label(L10n.text("隐藏玩家资料"), systemImage: "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .background(Color.black.opacity(0.82 * opacity), in: RoundedRectangle(cornerRadius: 7))
+                }
+                .buttonStyle(.plain).foregroundStyle(.white.opacity(0.92))
+                .position(x: proxy.size.width - 78, y: 28)
+            }
+            .preferredColorScheme(.dark)
+        }
+    }
+
+    private func position(for row: LobbyPlayerRow, size: CGSize) -> CGPoint {
+        let teamRows = rows.filter { $0.team == row.team }
+        let index = teamRows.firstIndex(where: { $0.riotID == row.riotID }) ?? 0
+        // Measured card centers for the current five-column loading layout.
+        let x = 0.190 + Double(index) * 0.154
+        // Loading screen card rows occupy matching positions in the upper and
+        // lower halves. Both badges sit at the same relative height inside the
+        // portrait rather than letting the Dock-trimmed frame lift row two.
+        let y = row.team == "ORDER" ? 0.405 : 0.889
+        return CGPoint(x: size.width * x, y: size.height * y)
+    }
+}
+
+@MainActor final class LobbyScoutOverlayController {
+    private var panel: LobbyScoutPanel?
+    private var signature = ""
+    private var collapsed = false
+    private var matchKey = ""
+
+    func update(model: OverlayModel, store: LobbyScoutStore, recognition: AutoRecognition, game: GameSurface?) {
+        guard model.playerScoutEnabled, !store.rows.isEmpty, let game, game.foreground else {
+            panel?.orderOut(nil); return
+        }
+        let showLoading = store.isLoadingScreen
+        // Player profiles and their layout are cached during loading. In game,
+        // the physical Tab key is the only visibility gate: OCR misses must
+        // never hide and re-show the cached panel while Tab remains held.
+        let tabIsHeld = CGEventSource.keyState(.combinedSessionState, key: 48)
+        let showScoreboard = store.isInGame && tabIsHeld
+        guard showLoading || showScoreboard else { panel?.orderOut(nil); return }
+        let currentMatchKey = store.rows.map(\.riotID).joined(separator: "|")
+        if currentMatchKey != matchKey {
+            matchKey = currentMatchKey; collapsed = false
+        }
+        let panel = self.panel ?? makePanel()
+        let nextSignature = "\(store.rows):\(store.status):\(collapsed):\(showScoreboard):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
+        if signature != nextSignature {
+            signature = nextSignature
+            if showScoreboard {
+                panel.contentView = NSHostingView(rootView: InGameScoutView(
+                    rows: store.rows, anchors: [:], opacity: model.opacity
+                ))
+            } else {
+                panel.contentView = NSHostingView(rootView: LoadingScoutCardsView(
+                    rows: store.rows, opacity: model.opacity, collapsed: collapsed,
+                    toggle: { [weak self] in self?.toggle() }
+                ))
+            }
+        }
+        // Loading cards, like the in-game scoreboard, are laid out against the
+        // full game window. macOS visibleFrame excludes the Dock and shifts the
+        // lower row upward by roughly 90 points.
+        let bounds = game.frame
+        let size = (showScoreboard || !collapsed) ? bounds.size : NSSize(width: 132, height: 34)
+        let x = (showScoreboard || !collapsed) ? bounds.minX : bounds.minX + 18
+        let y = (showScoreboard || !collapsed) ? bounds.minY : bounds.minY + 54
+        let frame = NSRect(x: x, y: y, width: size.width, height: size.height)
+        panel.level = NSWindow.Level(rawValue: max(Int(CGShieldingWindowLevel()) + 2, game.layer + 2))
+        if panel.frame != frame { panel.setFrame(frame, display: true) }
+        panel.alphaValue = model.opacity
+        panel.ignoresMouseEvents = showScoreboard
+        panel.orderFrontRegardless()
+    }
+
+    func hide() { panel?.orderOut(nil) }
+
+    private func toggle() {
+        collapsed.toggle()
+        signature = ""
+    }
+
+    private func makePanel() -> LobbyScoutPanel {
+        let panel = LobbyScoutPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = false
+        panel.isFloatingPanel = true; panel.hidesOnDeactivate = false; panel.isReleasedWhenClosed = false
+        panel.ignoresMouseEvents = false; panel.animationBehavior = .none
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .canJoinAllApplications]
+        panel.title = L10n.text("Wexi LoL 当前对局玩家")
+        self.panel = panel
+        return panel
+    }
+}
