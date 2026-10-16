@@ -8,7 +8,7 @@
 <p align="center">
   <a href="https://www.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-13%2B-000000?logo=apple" alt="macOS 13+"></a>
   <a href="https://www.swift.org/"><img src="https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&amp;logoColor=white" alt="Swift 5.9"></a>
-  <a href="https://github.com/Loeraw/Wexi-LoL/releases/latest"><img src="https://img.shields.io/github/v/release/Loeraw/Wexi-LoL" alt="Latest release"></a>
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/tag/v0.5.0"><img src="https://img.shields.io/badge/release-v0.5.0-D26A3A" alt="Release v0.5.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
 </p>
 
