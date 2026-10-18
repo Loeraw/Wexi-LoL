@@ -22,7 +22,7 @@ final class ControlWindow: NSWindow {}
     private var layoutTimer: Timer?
     private var lastDiagnosticWrite = Date.distantPast
     private var displayedVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.5.3"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.5.4"
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {

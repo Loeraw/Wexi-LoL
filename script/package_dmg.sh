@@ -9,7 +9,7 @@ BUNDLE="$ROOT_DIR/dist/Wexi LoL.app"
 codesign --verify --deep --strict --verbose=2 "$BUNDLE"
 
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$BUNDLE/Contents/Info.plist")"
-DMG_PATH="$ROOT_DIR/dist/Wexi LoL-$VERSION.dmg"
+DMG_PATH="$ROOT_DIR/dist/Wexi.LoL-$VERSION.dmg"
 STAGING="$(mktemp -d "${TMPDIR:-/tmp}/wexilol-dmg.XXXXXX")"
 trap 'rm -rf "$STAGING"' EXIT
 
