@@ -51,6 +51,11 @@ final class SummonerProfileTests: XCTestCase {
         XCTAssertNil(profile.winRate)
     }
 
+    func testRejectsNonProfileStructuredData() throws {
+        let html = #"<script type="application/ld+json">{"@graph":[{"@type":"WebPage","name":"OP.GG"}]}</script>"#
+        XCTAssertThrowsError(try SummonerProfileParser.parse(html))
+    }
+
     func testFetchedPublicProfileWhenProvided() throws {
         guard let path = ProcessInfo.processInfo.environment["RIFT_SUMMONER_FIXTURE"] else {
             throw XCTSkip("Set RIFT_SUMMONER_FIXTURE for live-page smoke test")

@@ -1,5 +1,6 @@
 import Foundation
 import RiftCore
+import OSLog
 
 struct LobbyPlayerRow: Identifiable, Equatable, Sendable {
     let riotID: String
@@ -38,6 +39,11 @@ private enum LeagueRegionDetector {
 private final class OPGGSummonerClient: @unchecked Sendable {
     private let session: URLSession
 
+    private enum FetchError: Error {
+        case httpStatus(Int)
+        case invalidHTML
+    }
+
     init() {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.httpShouldSetCookies = false
@@ -50,14 +56,41 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     deinit { session.invalidateAndCancel() }
 
     func fetch(riotID: String, region: OPGGRegion) async throws -> SummonerProfile {
+        var lastError: Error = URLError(.unknown)
+        for attempt in 0..<3 {
+            do { return try await fetchOnce(riotID: riotID, region: region) }
+            catch {
+                lastError = error
+                guard attempt < 2, isTransient(error) else { throw error }
+                let delay = UInt64(450 + attempt * 750) * 1_000_000
+                try await Task.sleep(nanoseconds: delay)
+            }
+        }
+        throw lastError
+    }
+
+    private func fetchOnce(riotID: String, region: OPGGRegion) async throws -> SummonerProfile {
         guard let url = SummonerProfileURL.make(riotID: riotID, region: region) else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
         request.setValue("WexiLoL/0.5.3", forHTTPHeaderField: "User-Agent")
         request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+        request.setValue("text/html,application/xhtml+xml", forHTTPHeaderField: "Accept")
         let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-              let html = String(data: data, encoding: .utf8) else { throw URLError(.badServerResponse) }
+        guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+        guard http.statusCode == 200 else { throw FetchError.httpStatus(http.statusCode) }
+        guard let html = String(data: data, encoding: .utf8), !html.isEmpty else { throw FetchError.invalidHTML }
         return try SummonerProfileParser.parse(html)
+    }
+
+    private func isTransient(_ error: Error) -> Bool {
+        if case FetchError.httpStatus(let status) = error {
+            return status == 408 || status == 425 || status == 429 || (500...599).contains(status)
+        }
+        guard let urlError = error as? URLError else { return false }
+        return [
+            .timedOut, .cannotFindHost, .cannotConnectToHost, .networkConnectionLost,
+            .dnsLookupFailed, .notConnectedToInternet, .resourceUnavailable
+        ].contains(urlError.code)
     }
 }
 
@@ -87,6 +120,9 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     private var detectedRegion: OPGGRegion?
     private var lastRegionDetection = Date.distantPast
 
+    var loadedProfileCount: Int { rows.lazy.filter { $0.profile != nil }.count }
+    var failedProfileCount: Int { rows.lazy.filter(\.failed).count }
+
     init() {
         let saved = UserDefaults.standard.string(forKey: "playerScoutRegion.v1") ?? "auto"
         regionPreference = saved == "auto" || OPGGRegion(rawValue: saved) != nil ? saved : "auto"
@@ -95,6 +131,13 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     var isLoadingScreen: Bool { !rows.isEmpty && gameTime.isFinite && gameTime <= 1 }
     var isInGame: Bool { !rows.isEmpty && gameTime.isFinite && gameTime > 1 }
     var status: String {
+        if statusKey == "scout-complete-with-failures" {
+            let loaded = loadedProfileCount
+            let failed = failedProfileCount
+            if loaded == 0 { return L10n.text("无公开数据") + " \(failed)/\(rows.count)" }
+            let base = L10n.text(gameTime > 1 ? "玩家资料已读取 · 按 Tab 显示" : "玩家资料已读取 · 进入游戏后按 Tab 显示")
+            return base + " · " + L10n.text("无公开数据") + " \(failed)/\(rows.count)"
+        }
         switch statusValues.count {
         case 1: return L10n.text(statusKey, statusValues[0])
         case 2: return L10n.text(statusKey, statusValues[0], statusValues[1])
@@ -173,9 +216,9 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     private func fetchProfiles(signature: String, region: OPGGRegion) async {
         let pending = rows.filter { $0.profile == nil }.map(\.riotID)
         var completed = rows.count - pending.count
-        for start in stride(from: 0, to: pending.count, by: 3) {
+        for start in stride(from: 0, to: pending.count, by: 2) {
             guard !Task.isCancelled, matchSignature == signature else { return }
-            let batch = Array(pending[start..<min(start + 3, pending.count)])
+            let batch = Array(pending[start..<min(start + 2, pending.count)])
             await withTaskGroup(of: (String, Result<SummonerProfile, Error>).self) { group in
                 for riotID in batch {
                     group.addTask { [client] in
@@ -190,16 +233,27 @@ private final class OPGGSummonerClient: @unchecked Sendable {
                     case .success(let profile):
                         rows[index].profile = profile
                         cache[region.rawValue + ":" + riotID] = (Date(), profile)
-                    case .failure:
+                    case .failure(let error):
                         rows[index].failed = true
+                        Logger(subsystem: "dev.local.wexilol", category: "OPGGProfile")
+                            .error("Profile request failed: domain=\((error as NSError).domain, privacy: .public) code=\((error as NSError).code)")
                     }
                     completed += 1
                     setStatus("正在读取玩家资料 %d/%d…", completed, rows.count)
                 }
             }
+            if start + batch.count < pending.count {
+                do { try await Task.sleep(nanoseconds: 250_000_000) } catch { return }
+            }
         }
         if !Task.isCancelled, matchSignature == signature {
-            setStatus(gameTime > 1 ? "玩家资料已读取 · 按 Tab 显示" : "玩家资料已读取 · 进入游戏后按 Tab 显示")
+            let failed = failedProfileCount
+            if failed == 0 {
+                setStatus(gameTime > 1 ? "玩家资料已读取 · 按 Tab 显示" : "玩家资料已读取 · 进入游戏后按 Tab 显示")
+            } else {
+                statusKey = "scout-complete-with-failures"
+                statusValues = []
+            }
         }
     }
 

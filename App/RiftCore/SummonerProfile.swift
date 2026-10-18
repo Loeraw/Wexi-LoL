@@ -85,7 +85,13 @@ public enum SummonerProfileParser {
         }
         guard !graph.isEmpty else { throw SummonerProfileParseError.missingStructuredData }
         let person = graph.first { ($0["@type"] as? String) == "Person" }
-        let riotID = person?["name"] as? String ?? ""
+        guard let riotID = person?["name"] as? String,
+              !riotID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            // OP.GG can return an HTTP 200 document for a missing profile or
+            // an interstitial. Do not present that document as an unranked
+            // player just because it contains unrelated structured data.
+            throw SummonerProfileParseError.missingStructuredData
+        }
         let description = graph.first { ($0["@type"] as? String) == "ProfilePage" }?["description"] as? String ?? ""
         let rank = parseRank(description)
 
