@@ -40,17 +40,17 @@ The current build uses a local ad-hoc signature and has not been notarized by Ap
 
 | 功能 | 中文 | English |
 | --- | --- | --- |
-| 海克斯评级 | 识别三选一海克斯卡片，并在对应位置显示 S / T1–T5 评级 | Recognizes the three augment choices and displays S / T1–T5 ratings in place |
+| 海克斯评级 | 识别三选一海克斯卡片，并在对应位置显示 S / T1–T5 评级、选用率和胜率 | Recognizes the three augment choices and displays S / T1–T5 ratings, pick rate, and win rate in place |
 | 技能加点 | 根据当前英雄、等级和已分配技能点提示下一次 Q/W/E/R 加点 | Suggests the next Q/W/E/R upgrade from the champion, level, and current ranks |
 | 目标计时 | 显示峡谷史诗目标刷新时间，并在大乱斗小地图上显示血包倒计时 | Tracks Rift epic objectives and shows ARAM health-relic countdowns on the minimap |
-| 出装推荐 | 显示 OP.GG 主流三件套、胜率、选用率和下一件装备 | Shows popular OP.GG three-item builds, win rate, pick rate, and the next item |
+| 出装推荐 | 显示 OP.GG 主流三件套、胜率、选用率和下一件装备；游戏内面板可随时收起和恢复 | Shows popular OP.GG three-item builds, win rate, pick rate, and the next item; the in-game panel can be collapsed and restored |
 | 模式面板 | 主界面按排位、大乱斗混乱、极地大乱斗和斗魂竞技场分别展示攻略；斗魂海克斯根据胜率与样本生成评级 | Separate guide panels for Ranked, ARAM: Mayhem, ARAM, and Arena; Arena augment tiers are calculated from win rate and sample size |
-| 玩家资料 | 自动识别当前区服，在 Loading 时读取本局 10 名玩家的段位、胜率和最近 5 场 W/L，游戏内按住 Tab 显示缓存 | Auto-detects the current region, loads rank, win rate, and recent W/L for all 10 players during loading, then shows cached data while Tab is held |
+| 玩家资料 | 自动识别当前区服，在 Loading 时读取本局 10 名玩家的段位、胜率和最近 5 场 W/L；排位 Tab 面板还显示前三常用英雄及使用率 | Auto-detects the current region and loads rank, win rate, and recent W/L for all 10 players; Ranked Tab panels also show each player's top three champions and usage rates |
 | 多语言界面与识别 | Wexi 界面可选择 12 种语言；游戏客户端语言可独立选择 15 种，并加载对应 OP.GG 海克斯名称与 Vision OCR | Choose from 12 Wexi interface languages and independently select one of 15 game-client languages for localized OP.GG augment names and Vision OCR |
 
-正常提示窗口支持鼠标穿透，不会阻止点击技能或海克斯卡片。游戏进入后台时，提示会自动隐藏。
+正常提示窗口支持鼠标穿透，不会阻止点击技能或海克斯卡片；只有明确显示的收起/恢复按钮接收鼠标点击。游戏进入后台时，提示会自动隐藏。
 
-Normal overlay hints ignore mouse input, so they do not block skills or augment cards. Hints hide automatically when the game is no longer in the foreground.
+Normal overlay hints ignore mouse input, so they do not block skills or augment cards; only visible collapse/restore controls accept clicks. Hints hide automatically when the game is no longer in the foreground.
 
 ## 系统要求 / Requirements
 
@@ -80,13 +80,13 @@ Screen Recording is used only to read the foreground League of Legends window fo
 
 ### 海克斯与技能 / Augments and Skills
 
-- 海克斯三选一出现时，评级标签会显示在对应卡片附近。刷新单张卡片时，未刷新的识别结果会保留。
+- 海克斯三选一出现时，评级、选用率和胜率会显示在对应卡片附近。刷新单张卡片时，未刷新的识别结果会保留。
 - 有可用技能点时，应用会在推荐的 Q/W/E/R 升级位置显示提示。
 - 如果技能位置无法自动识别，可在设置中选择“校准技能＋位置”，拖动四个标记后按 Option-Command-K 保存。
 - “Wexi 语言”控制应用界面和攻略显示；“游戏客户端语言”应选择与英雄联盟客户端一致的语言，以加载对应海克斯名称供 OCR 匹配。
 - 游戏客户端识别支持简体中文、繁体中文、英语、韩语、日语、法语、德语、西班牙语、葡萄牙语、俄语、土耳其语、波兰语、意大利语、泰语和越南语。
 
-- When three augment choices appear, rating labels are placed near their matching cards. Rerolling one slot preserves the unchanged results.
+- When three augment choices appear, the rating, pick rate, and win rate are placed near their matching cards. Rerolling one slot preserves the unchanged results.
 - When a skill point is available, the app shows a recommendation over the corresponding Q/W/E/R upgrade position.
 - If automatic skill placement fails, choose **Calibrate skill + positions**, move all four markers, and press Option-Command-K to save.
 - **Wexi language** controls the app interface and guide display. Set **Game client language** to the language used by League so Wexi can load matching augment names for OCR.
@@ -100,16 +100,26 @@ Screen Recording is used only to read the foreground League of Legends window fo
 - On Summoner's Rift, Riot local events are used to calculate dragon, Elder Dragon, Rift Herald, and Baron timers.
 - In ARAM, hold Tab for about one second to read the scoreboard's health-relic timers. After Tab is released, countdowns continue at their minimap locations.
 
+### 出装推荐 / Recommended Builds
+
+- 游戏内出装面板根据已购买的核心装备匹配 OP.GG 主流三件套，并标出下一件装备。
+- 点击面板右上角箭头可以收起；收起后点击小装备图标即可恢复。主面板仍保持鼠标穿透。
+
+- The in-game build panel matches completed core items to a popular OP.GG three-item route and marks the next item.
+- Use the top-right arrow to collapse it, then click the small item icon to restore it. The main panel continues to ignore mouse input.
+
 ### 对局玩家 / Player Scouting
 
 - Loading 界面只读取一次当前 10 名玩家的公开 OP.GG 资料，并缓存在本局内存中。
 - 应用会自动读取英雄联盟客户端的区服；如果未能识别，可在设置中手动选择 NA、ME、EUW、EUNE、OCE、KR、JP、BR、LAS、LAN、RU、TR、SEA、TW 或 VN。
 - 进入游戏后资料自动隐藏；只有按住物理 Tab 键时才显示缓存，不会重复请求 OP.GG。
+- 排位模式的 Tab 玩家卡片还会显示该玩家前三常用英雄，以及各英雄占本赛季排位场次的比例。
 - 绿色 W 表示胜利，红色 L 表示失败。
 
 - The loading screen fetches public OP.GG profiles for the 10 current players once and keeps them in an in-memory match cache.
 - The app detects the League client region automatically. If detection is unavailable, Settings lets you choose NA, ME, EUW, EUNE, OCE, KR, JP, BR, LAS, LAN, RU, TR, SEA, TW, or VN manually.
 - Profiles hide after the game starts and reappear from cache only while the physical Tab key is held. OP.GG is not requested again.
+- Ranked Tab cards also show each player's top three champions and their share of the player's ranked games this season.
 - Green **W** means win; red **L** means loss.
 
 ## 数据来源与隐私 / Data Sources and Privacy
@@ -153,9 +163,9 @@ swift test
 ./script/package_source.sh
 ```
 
-当前测试套件包含 53 项测试，其中三项公共网页冒烟测试需要单独提供本地 fixture。
+当前测试套件包含 58 项测试，其中三项公共网页冒烟测试需要单独提供本地 fixture。
 
-The current suite contains 53 tests. Three public-page smoke tests require optional local fixtures.
+The current suite contains 58 tests. Three public-page smoke tests require optional local fixtures.
 
 ## 已知限制 / Known Limitations
 

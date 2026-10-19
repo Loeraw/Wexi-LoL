@@ -152,7 +152,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
             "刷新": "重新整理", "海克斯评级": "增幅裝置評級", "参考列表": "參考列表", "搜索英雄：": "搜尋英雄：",
             "搜索海克斯：": "搜尋增幅裝置：", "已授权": "已授權", "未授权": "未授權", "开启录屏权限": "啟用螢幕錄製權限",
             "打开系统权限设置": "開啟系統權限設定", "校准技能＋位置": "校準技能＋位置", "保存技能位置": "儲存技能位置",
-            "取消校准": "取消校準", "胜率 %.1f%%": "勝率 %.1f%%", "选用率 %.1f%% · %d 场": "選用率 %.1f%% · %d 場"
+            "取消校准": "取消校準", "胜率 %.1f%%": "勝率 %.1f%%", "选用率 %.1f%%": "選用率 %.1f%%", "选用率 %.1f%% · %d 场": "選用率 %.1f%% · %d 場"
         ],
         .korean: [
             "语言": "언어", "游戏客户端语言": "게임 클라이언트 언어", "跟随 Wexi 语言": "Wexi 언어 따르기",
@@ -191,7 +191,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
             "刷新": "Actualiser", "海克斯评级": "Niveaux d’optimisations", "参考列表": "Liste de référence", "搜索英雄：": "Rechercher un champion :",
             "搜索海克斯：": "Rechercher une optimisation :", "已授权": "Autorisé", "未授权": "Non autorisé", "开启录屏权限": "Autoriser l’enregistrement",
             "打开系统权限设置": "Ouvrir les autorisations système", "校准技能＋位置": "Calibrer les compétences", "保存技能位置": "Enregistrer les positions",
-            "取消校准": "Annuler", "胜率 %.1f%%": "Taux de victoire %.1f%%", "选用率 %.1f%% · %d 场": "Sélection %.1f%% · %d parties",
+            "取消校准": "Annuler", "胜率 %.1f%%": "Taux de victoire %.1f%%", "选用率 %.1f%%": "Sélection %.1f%%", "选用率 %.1f%% · %d 场": "Sélection %.1f%% · %d parties",
             "当前玩家区服": "Région actuelle", "等待检测": "En attente de détection",
             "无法自动识别区服，请在设置中选择玩家区服。": "Impossible de détecter la région. Choisissez-la dans les réglages.",
             "显示玩家段位与战绩": "Afficher les rangs et l’historique des joueurs",
@@ -208,6 +208,7 @@ enum AppLanguage: String, CaseIterable, Identifiable {
             "IRON": "Fer", "BRONZE": "Bronze", "SILVER": "Argent", "GOLD": "Or", "PLATINUM": "Platine",
             "EMERALD": "Émeraude", "DIAMOND": "Diamant", "MASTER": "Maître", "GRANDMASTER": "Grand Maître", "CHALLENGER": "Challenger",
             "显示推荐出装与胜率": "Afficher le build recommandé et son taux de victoire",
+            "显示推荐出装": "Afficher le build recommandé", "隐藏推荐出装": "Masquer le build recommandé",
             "根据当前已购买的核心装备匹配 OP.GG 主流三件套，并标出下一件；胜率是该完整路线的统计。": "Associe vos objets principaux à un build populaire de trois objets sur OP.GG et indique le prochain achat. Le taux de victoire correspond au build complet.",
             "已加载出装路线": "Builds chargés", "%d 套": "%d builds", "OP.GG 出装来源 ↗": "Source des builds OP.GG ↗",
             "斗魂评级根据同稀有度海克斯的 OP.GG 胜率与场次计算，并非 OP.GG 官方分级。": "Les niveaux d’Arène sont calculés avec le taux de victoire et le nombre de parties OP.GG pour une même rareté. Ce ne sont pas des niveaux officiels OP.GG.",
@@ -387,7 +388,10 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         "已加载出装路线": "Loaded build routes",
         "%d 套": "%d routes",
         "推荐出装": "Recommended build",
+        "显示推荐出装": "Show recommended build",
+        "隐藏推荐出装": "Hide recommended build",
         "按场次排序": "Sorted by games",
+        "选用率 %.1f%%": "Pick rate %.1f%%",
         "选用率 %.1f%% · %d 场": "Pick rate %.1f%% · %d games",
         "OP.GG 出装来源 ↗": "OP.GG build source ↗",
         "大乱斗混乱": "ARAM: Mayhem",

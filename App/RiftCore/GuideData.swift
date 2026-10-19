@@ -126,7 +126,11 @@ public enum GuideParser {
                         guard let id = row["id"] as? Int, let name = row["name"] as? String,
                               let key = row["key"] as? String, let tier = row["tier"] as? Int,
                               (0...5).contains(tier), let rarity = row["rarity"] as? Int else { return nil }
-                        return AugmentRating(id: id, name: name, key: key, tier: tier, rarity: rarity)
+                        let winRate = number(row["win_rate"]).flatMap { (0...100).contains($0) ? $0 : nil }
+                        let pickRate = number(row["pick_rate"]).flatMap { (0...100).contains($0) ? $0 : nil }
+                        let games = count(row["play"])
+                        return AugmentRating(id: id, name: name, key: key, tier: tier, rarity: rarity,
+                                             winRate: winRate, pickRate: pickRate, games: games)
                     }
                 }
                 if let groups = (dict["augments"] as? [String: Any]) ?? (dict["data"] as? [String: Any]),

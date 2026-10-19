@@ -20,7 +20,53 @@ final class SummonerProfileTests: XCTestCase {
     func testGlobalProfileURLUsesSelectedRegionAndEscapesRiotID() {
         let url = SummonerProfileURL.make(riotID: "Name With Space#NA1", region: .na)
         XCTAssertEqual(url?.absoluteString, "https://op.gg/lol/summoners/na/Name%20With%20Space-NA1")
+        XCTAssertEqual(SummonerProfileURL.aiJSON(riotID: "Name With Space#NA1", region: .na)?.absoluteString,
+                       "https://op.gg/lol/summoners/na/Name%20With%20Space-NA1/ai.json")
         XCTAssertNil(SummonerProfileURL.make(riotID: "missing-tag", region: .kr))
+    }
+
+    func testParsesAIProfileAndTopThreeRankedChampionUsage() throws {
+        let json = #"""
+        {
+          "identity":{"riotId":"Player#EUW"},
+          "freshness":{"summonerUpdatedAt":"2026-10-19T10:00:00+09:00"},
+          "rank":{"entries":[{"queueType":"SOLORANKED","tier":"gold 1","lp":42,"wins":10,"losses":10,"winRate":50}]},
+          "recentChampionsSource":"most-champion-stats",
+          "recentChampions":[
+            {"name":"Ahri","key":"ahri","wins":6,"losses":4},
+            {"name":"Lux","key":"lux","wins":3,"losses":2},
+            {"name":"Nami","key":"nami","wins":2,"losses":1},
+            {"name":"Janna","key":"janna","wins":1,"losses":0}
+          ],
+          "recentGames":[{"result":"WIN"},{"result":"LOSE"},{"result":"REMAKE"}]
+        }
+        """#
+        let profile = try SummonerProfileAIParser.parse(Data(json.utf8))
+        XCTAssertEqual(profile.riotID, "Player#EUW")
+        XCTAssertEqual(profile.tier, "GOLD 1")
+        XCTAssertEqual(profile.leaguePoints, 42)
+        XCTAssertEqual(profile.recent, [.win, .loss, .other])
+        XCTAssertEqual(profile.topChampions.map(\.key), ["ahri", "lux", "nami"])
+        XCTAssertEqual(profile.topChampions.map(\.games), [10, 5, 3])
+        XCTAssertEqual(profile.topChampions.map(\.usageRate), [50, 25, 15])
+        XCTAssertNotNil(profile.updatedAt)
+    }
+
+    func testRecentChampionUsageUsesListedGamesAsDenominator() throws {
+        let json = #"""
+        {
+          "identity":{"riotId":"Player#EUW"},
+          "rank":{"entries":[]},
+          "recentChampionsSource":"recent-games",
+          "recentChampions":[
+            {"name":"Ahri","key":"ahri","wins":2,"losses":1},
+            {"name":"Lux","key":"lux","wins":1,"losses":1}
+          ],
+          "recentGames":[]
+        }
+        """#
+        let profile = try SummonerProfileAIParser.parse(Data(json.utf8))
+        XCTAssertEqual(profile.topChampions.map(\.usageRate), [60, 40])
     }
 
     func testParsesRankAndRecentResultsFromJSONLD() throws {

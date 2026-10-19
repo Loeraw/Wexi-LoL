@@ -69,6 +69,8 @@ private struct HintBadge: View {
     let calibration: Bool
     var body: some View {
         Text(text).font(.system(size: calibration ? 14 : 15, weight: .bold, design: .rounded))
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
             .foregroundStyle(calibration ? Color.white : Color(red: 0.4, green: 0.95, blue: 0.78))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.black.opacity(0.85), in: RoundedRectangle(cornerRadius: 7))
@@ -138,8 +140,10 @@ private struct HintBadge: View {
                 for card in cards {
                     guard let augment = guide.augments.first(where: { $0.id == card.id }) else { continue }
                     let id = "card-\(card.id)"
-                    show(id: id, text: augment.tierLabel, anchor: card.anchor, offset: 0,
-                         size: NSSize(width: 42, height: 28), game: game, calibration: false, opacity: model.opacity)
+                    let hasRates = augment.pickRate != nil && augment.winRate != nil
+                    show(id: id, text: augmentHintText(augment), anchor: card.anchor, offset: 0,
+                         size: NSSize(width: hasRates ? 248 : 42, height: 28),
+                         game: game, calibration: false, opacity: model.opacity)
                     shown.insert(id)
                 }
             } else if let skill = recognition.recommendedSkill {
@@ -162,6 +166,13 @@ private struct HintBadge: View {
     }
     private func setStatus(_ text: String, model: OverlayModel) {
         if model.overlayStatus != text { model.overlayStatus = text }
+    }
+    private func augmentHintText(_ augment: AugmentRating) -> String {
+        guard let pickRate = augment.pickRate, let winRate = augment.winRate else {
+            return augment.tierLabel
+        }
+        return augment.tierLabel + " · " + L10n.text("选用率 %.1f%%", pickRate)
+            + " · " + L10n.text("胜率 %.1f%%", winRate)
     }
     private func show(id: String, text: String, anchor: HintAnchor, offset: CGFloat, size: NSSize,
                       game: GameSurface, calibration: Bool, opacity: Double) {

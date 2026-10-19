@@ -99,7 +99,7 @@ final class ControlWindow: NSWindow {}
                                      game: recognition.capturedGameSurface ?? GameSurface.current())
         itemBuildOverlay.update(model: model, guide: guide, recognition: recognition, calibration: calibration,
                                 game: recognition.capturedGameSurface ?? GameSurface.current())
-        lobbyScoutOverlay.update(model: model, store: lobbyScout, recognition: recognition,
+        lobbyScoutOverlay.update(model: model, store: lobbyScout, guide: guide, recognition: recognition,
                                  game: recognition.capturedGameSurface ?? GameSurface.current())
         // One small local status file, overwritten every two seconds. No screenshots,
         // OCR text, account names or player identifiers are recorded.

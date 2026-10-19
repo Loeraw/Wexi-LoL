@@ -155,6 +155,8 @@ private struct LobbyScoutView: View {
 
 private struct InGamePlayerBadge: View {
     let row: LobbyPlayerRow
+    let showsTopChampions: Bool
+    let championNames: [String: String]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -179,6 +181,18 @@ private struct InGamePlayerBadge: View {
                     }
                     if profile.recent.isEmpty { Text("—").foregroundStyle(.secondary) }
                 }
+                if showsTopChampions, !profile.topChampions.isEmpty {
+                    HStack(spacing: 5) {
+                        ForEach(Array(profile.topChampions.prefix(3).enumerated()), id: \.offset) { _, champion in
+                            Text("\(championNames[champion.key] ?? champion.name) \(Int(champion.usageRate.rounded()))%")
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.55)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.cyan.opacity(0.92))
+                }
             } else if row.failed {
                 Text(L10n.text("无公开数据")).font(.system(size: 12, weight: .medium))
             } else {
@@ -186,7 +200,8 @@ private struct InGamePlayerBadge: View {
             }
         }
         .padding(.horizontal, 9).padding(.vertical, 6)
-        .frame(width: 164, height: 50, alignment: .leading)
+        .frame(width: showsTopChampions ? 196 : 164,
+               height: showsTopChampions ? 68 : 50, alignment: .leading)
         .foregroundStyle(.white.opacity(0.94))
         .background(Color.black.opacity(0.82), in: RoundedRectangle(cornerRadius: 6))
         .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.18), lineWidth: 1))
@@ -212,11 +227,14 @@ private struct InGameScoutView: View {
     let rows: [LobbyPlayerRow]
     let anchors: [String: HintAnchor]
     let opacity: Double
+    let showsTopChampions: Bool
+    let championNames: [String: String]
 
     var body: some View {
         GeometryReader { proxy in
             ForEach(rows) { row in
-                InGamePlayerBadge(row: row)
+                InGamePlayerBadge(row: row, showsTopChampions: showsTopChampions,
+                                  championNames: championNames)
                     .opacity(opacity)
                     .position(position(for: row, size: proxy.size))
             }
@@ -247,7 +265,7 @@ private struct LoadingScoutCardsView: View {
     var body: some View {
         GeometryReader { proxy in
             ForEach(rows) { row in
-                InGamePlayerBadge(row: row)
+                InGamePlayerBadge(row: row, showsTopChampions: false, championNames: [:])
                     .opacity(opacity)
                     .position(position(for: row, size: proxy.size))
             }
@@ -296,7 +314,8 @@ private struct LoadingScoutControlView: View {
     private var collapsed = false
     private var matchKey = ""
 
-    func update(model: OverlayModel, store: LobbyScoutStore, recognition: AutoRecognition, game: GameSurface?) {
+    func update(model: OverlayModel, store: LobbyScoutStore, guide: GuideStore,
+                recognition: AutoRecognition, game: GameSurface?) {
         guard model.playerScoutEnabled, !store.rows.isEmpty, let game, game.foreground else {
             hide(); return
         }
@@ -312,12 +331,15 @@ private struct LoadingScoutControlView: View {
             matchKey = currentMatchKey; collapsed = false
         }
         let panel = self.panel ?? makePanel()
-        let nextSignature = "\(store.rows):\(store.status):\(collapsed):\(showScoreboard):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
+        let championNames = Dictionary(uniqueKeysWithValues: guide.champions.map { ($0.id, $0.name) })
+        let nextSignature = "\(store.rows):\(store.status):\(collapsed):\(showScoreboard):\(store.showsRankedChampionUsage):\(championNames):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
         if signature != nextSignature {
             signature = nextSignature
             if showScoreboard {
                 panel.contentView = NSHostingView(rootView: InGameScoutView(
-                    rows: store.rows, anchors: [:], opacity: model.opacity
+                    rows: store.rows, anchors: [:], opacity: model.opacity,
+                    showsTopChampions: store.showsRankedChampionUsage,
+                    championNames: championNames
                 ))
             } else {
                 panel.contentView = NSHostingView(rootView: LoadingScoutCardsView(

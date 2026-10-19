@@ -59,6 +59,7 @@ private struct ItemBuildOverlayView: View {
                 Spacer()
                 Text(L10n.text("胜率 %.1f%%", build.winRate))
                     .font(.system(size: 12, weight: .bold, design: .rounded)).foregroundStyle(.mint)
+                Color.clear.frame(width: 22, height: 1)
             }
             HStack(spacing: 8) {
                 ForEach(build.items) { item in
@@ -76,17 +77,53 @@ private struct ItemBuildOverlayView: View {
     }
 }
 
+private struct ItemBuildOverlayControlView: View {
+    let collapsed: Bool
+    let opacity: Double
+    let toggle: () -> Void
+
+    var body: some View {
+        Button(action: toggle) {
+            Image(systemName: collapsed ? "shippingbox.fill" : "chevron.up")
+                .font(.system(size: 11, weight: .bold))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.opacity(0.88 * opacity), in: RoundedRectangle(cornerRadius: 7))
+                .overlay(RoundedRectangle(cornerRadius: 7).stroke(Color.white.opacity(0.18), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.white.opacity(0.92))
+        .help(L10n.text(collapsed ? "显示推荐出装" : "隐藏推荐出装"))
+        .accessibilityLabel(L10n.text(collapsed ? "显示推荐出装" : "隐藏推荐出装"))
+        .preferredColorScheme(.dark)
+    }
+}
+
 @MainActor final class ItemBuildOverlayController {
     private var panel: ItemBuildPanel?
+    private var controlPanel: ItemBuildPanel?
     private var signature = ""
+    private var controlSignature = ""
+    private var collapsed = false
+    private var wasEnabled = true
 
     func update(model: OverlayModel, guide: GuideStore, recognition: AutoRecognition,
                 calibration: SkillCalibration, game: GameSurface?) {
-        guard model.itemBuildEnabled, !calibration.active,
+        guard model.itemBuildEnabled else {
+            wasEnabled = false
+            hide()
+            return
+        }
+        if !wasEnabled {
+            wasEnabled = true
+            collapsed = false
+            signature = ""
+            controlSignature = ""
+        }
+        guard !calibration.active,
               recognition.cardHints.isEmpty, recognition.detectedChampion == guide.championKey,
               let build = ItemBuildRecommendation.choose(from: guide.itemBuilds, ownedItemIDs: recognition.ownedItemIDs),
               let game, game.foreground else {
-            panel?.orderOut(nil)
+            hide()
             return
         }
         let panel = self.panel ?? makePanel()
@@ -107,10 +144,36 @@ private struct ItemBuildOverlayView: View {
         panel.level = level
         if panel.frame != frame { panel.setFrame(frame, display: true) }
         panel.alphaValue = model.opacity
-        panel.orderFrontRegardless()
+        if collapsed { panel.orderOut(nil) }
+        else { panel.orderFrontRegardless() }
+
+        let control = controlPanel ?? makeControlPanel()
+        let nextControlSignature = "\(collapsed):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
+        if controlSignature != nextControlSignature {
+            controlSignature = nextControlSignature
+            control.contentView = NSHostingView(rootView: ItemBuildOverlayControlView(
+                collapsed: collapsed, opacity: model.opacity,
+                toggle: { [weak self] in self?.toggleCollapsed() }
+            ))
+        }
+        let controlSize = NSSize(width: 26, height: 26)
+        let controlFrame = NSRect(
+            x: collapsed ? frame.minX : frame.maxX - controlSize.width - 8,
+            y: frame.maxY - controlSize.height - 7,
+            width: controlSize.width, height: controlSize.height
+        )
+        control.level = NSWindow.Level(rawValue: level.rawValue + 1)
+        if control.frame != controlFrame { control.setFrame(controlFrame, display: true) }
+        control.alphaValue = model.opacity
+        control.orderFrontRegardless()
     }
 
-    func hide() { panel?.orderOut(nil) }
+    func hide() { panel?.orderOut(nil); controlPanel?.orderOut(nil) }
+
+    private func toggleCollapsed() {
+        collapsed.toggle()
+        controlSignature = ""
+    }
 
     private func makePanel() -> ItemBuildPanel {
         let panel = ItemBuildPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -120,6 +183,17 @@ private struct ItemBuildOverlayView: View {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .canJoinAllApplications]
         panel.title = L10n.text("Wexi LoL 推荐出装")
         self.panel = panel
+        return panel
+    }
+
+    private func makeControlPanel() -> ItemBuildPanel {
+        let panel = ItemBuildPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = false
+        panel.isFloatingPanel = true; panel.hidesOnDeactivate = false; panel.isReleasedWhenClosed = false
+        panel.ignoresMouseEvents = false; panel.animationBehavior = .none
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle, .canJoinAllApplications]
+        panel.title = L10n.text("Wexi LoL 推荐出装")
+        self.controlPanel = panel
         return panel
     }
 }

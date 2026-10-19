@@ -43,12 +43,30 @@ public enum SummonerProfileURL {
             .appendingPathComponent(region.rawValue)
             .appendingPathComponent(slug)
     }
+
+    public static func aiJSON(riotID: String, region: OPGGRegion) -> URL? {
+        make(riotID: riotID, region: region)?.appendingPathComponent("ai.json")
+    }
 }
 
 public enum RecentMatchResult: String, Equatable, Sendable {
     case win = "WIN"
     case loss = "LOSE"
     case other = "OTHER"
+}
+
+public struct TopChampionUsage: Equatable, Sendable {
+    public let name: String
+    public let key: String
+    public let games: Int
+    public let usageRate: Double
+
+    public init(name: String, key: String, games: Int, usageRate: Double) {
+        self.name = name
+        self.key = key
+        self.games = games
+        self.usageRate = usageRate
+    }
 }
 
 public struct SummonerProfile: Equatable, Sendable {
@@ -59,13 +77,16 @@ public struct SummonerProfile: Equatable, Sendable {
     public let losses: Int
     public let winRate: Double?
     public let recent: [RecentMatchResult]
+    public let topChampions: [TopChampionUsage]
     /// Time at which OP.GG says this profile snapshot was last refreshed.
     public let updatedAt: Date?
 
     public init(riotID: String, tier: String, leaguePoints: Int?, wins: Int, losses: Int,
-                winRate: Double?, recent: [RecentMatchResult], updatedAt: Date? = nil) {
+                winRate: Double?, recent: [RecentMatchResult],
+                topChampions: [TopChampionUsage] = [], updatedAt: Date? = nil) {
         self.riotID = riotID; self.tier = tier; self.leaguePoints = leaguePoints
         self.wins = wins; self.losses = losses; self.winRate = winRate; self.recent = recent
+        self.topChampions = topChampions
         self.updatedAt = updatedAt
     }
 
@@ -97,6 +118,95 @@ public enum RiotIDIdentity {
 }
 
 public enum SummonerProfileParseError: Error { case missingStructuredData }
+
+/// Reads the structured summary linked from an OP.GG summoner page. Besides
+/// rank and recent games, this contains the player's champion game counts.
+public enum SummonerProfileAIParser {
+    private struct Payload: Decodable {
+        struct Identity: Decodable { let riotId: String }
+        struct Freshness: Decodable { let summonerUpdatedAt: String? }
+        struct Rank: Decodable {
+            struct Entry: Decodable {
+                let queueType: String
+                let tier: String?
+                let lp: Int?
+                let wins: Int?
+                let losses: Int?
+                let winRate: Double?
+            }
+            let entries: [Entry]?
+        }
+        struct Champion: Decodable {
+            let name: String
+            let key: String
+            let wins: Int?
+            let losses: Int?
+        }
+        struct Game: Decodable { let result: String? }
+
+        let identity: Identity
+        let freshness: Freshness?
+        let rank: Rank?
+        let recentChampionsSource: String?
+        let recentChampions: [Champion]?
+        let recentGames: [Game]?
+    }
+
+    public static func parse(_ data: Data) throws -> SummonerProfile {
+        let payload = try JSONDecoder().decode(Payload.self, from: data)
+        let riotID = payload.identity.riotId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !riotID.isEmpty else { throw SummonerProfileParseError.missingStructuredData }
+
+        let ranked = payload.rank?.entries?.first { $0.queueType.uppercased() == "SOLORANKED" }
+        let wins = ranked?.wins ?? 0
+        let losses = ranked?.losses ?? 0
+        let champions = (payload.recentChampions ?? []).map { champion in
+            (champion: champion, games: max(0, (champion.wins ?? 0) + (champion.losses ?? 0)))
+        }
+        let rankedGames = wins + losses
+        let listedGames = champions.reduce(0) { $0 + $1.games }
+        let denominator = payload.recentChampionsSource == "most-champion-stats" && rankedGames > 0
+            ? rankedGames : listedGames
+        let topChampions = champions
+            .filter { $0.games > 0 }
+            .sorted {
+                if $0.games != $1.games { return $0.games > $1.games }
+                return $0.champion.name.localizedCaseInsensitiveCompare($1.champion.name) == .orderedAscending
+            }
+            .prefix(3)
+            .map {
+                TopChampionUsage(name: $0.champion.name, key: $0.champion.key,
+                                 games: $0.games,
+                                 usageRate: denominator > 0 ? Double($0.games) * 100 / Double(denominator) : 0)
+            }
+        let recent = (payload.recentGames ?? []).prefix(10).map { game -> RecentMatchResult in
+            switch game.result?.uppercased() {
+            case "WIN": return .win
+            case "LOSE": return .loss
+            default: return .other
+            }
+        }
+        return SummonerProfile(
+            riotID: riotID,
+            tier: ranked?.tier?.uppercased() ?? "UNRANKED",
+            leaguePoints: ranked?.lp,
+            wins: wins,
+            losses: losses,
+            winRate: ranked?.winRate,
+            recent: recent,
+            topChampions: topChampions,
+            updatedAt: payload.freshness?.summonerUpdatedAt.flatMap(parseISO8601Date)
+        )
+    }
+
+    private static func parseISO8601Date(_ value: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: value) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: value)
+    }
+}
 
 /// Reads OP.GG's public JSON-LD profile summary. JSON-LD is preferred over
 /// scraping CSS classes because it is intended for machine-readable consumers.

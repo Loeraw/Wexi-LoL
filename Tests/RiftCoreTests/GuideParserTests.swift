@@ -13,13 +13,17 @@ final class GuideParserTests: XCTestCase {
     }
     func testSplitFlightUnicodeTierZeroAndMissingRecords() throws {
         let html = try page(["props": ["query": ["patch": "16.20"], "data": [
-            ["id": 1071, "tier": 0, "rarity": 4, "key": "ARAM_ScopierWeapons", "name": "更万用的瞄准镜"],
+            ["id": 1071, "tier": 0, "rarity": 4, "key": "ARAM_ScopierWeapons", "name": "更万用的瞄准镜",
+             "win_rate": 54.3, "pick_rate": 12.8, "play": "1,234"],
             ["id": 9999, "tier": 5]
         ]]])
         let output = try GuideParser.parse(html)
         XCTAssertEqual(output.patch, "16.20")
         XCTAssertEqual(output.augments.count, 1)
         XCTAssertEqual(output.augments[0].tierLabel, "S")
+        XCTAssertEqual(output.augments[0].winRate, 54.3)
+        XCTAssertEqual(output.augments[0].pickRate, 12.8)
+        XCTAssertEqual(output.augments[0].games, 1_234)
         XCTAssertTrue(output.augments[0].matches("Scopier Weapons"))
         XCTAssertTrue(output.augments[0].matches("瞄准镜"))
     }

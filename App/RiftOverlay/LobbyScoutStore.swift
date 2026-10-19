@@ -71,6 +71,34 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     }
 
     private func fetchOnce(riotID: String, region: OPGGRegion) async throws -> SummonerProfile {
+        do {
+            return try await fetchAIProfile(riotID: riotID, region: region)
+        } catch let aiError {
+            do { return try await fetchHTMLProfile(riotID: riotID, region: region) }
+            catch {
+                // Preserve a transient JSON-endpoint failure so the outer retry
+                // can try again even when the HTML fallback is an interstitial.
+                if isTransient(aiError) { throw aiError }
+                throw error
+            }
+        }
+    }
+
+    private func fetchAIProfile(riotID: String, region: OPGGRegion) async throws -> SummonerProfile {
+        guard let url = SummonerProfileURL.aiJSON(riotID: riotID, region: region) else { throw URLError(.badURL) }
+        var request = URLRequest(url: url)
+        request.setValue("WexiLoL/0.5.5", forHTTPHeaderField: "User-Agent")
+        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+        guard http.statusCode == 200 else { throw FetchError.httpStatus(http.statusCode) }
+        let profile = try SummonerProfileAIParser.parse(data)
+        guard RiotIDIdentity.matches(profile.riotID, riotID) else { throw FetchError.identityMismatch }
+        return profile
+    }
+
+    private func fetchHTMLProfile(riotID: String, region: OPGGRegion) async throws -> SummonerProfile {
         guard let url = SummonerProfileURL.make(riotID: riotID, region: region) else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
         request.setValue("WexiLoL/0.5.5", forHTTPHeaderField: "User-Agent")
@@ -102,6 +130,7 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     @Published private var statusKey = "等待加载界面的玩家名单…"
     @Published private var statusValues: [Int] = []
     @Published private(set) var gameTime: Double = .infinity
+    @Published private(set) var gameMode = ""
     @Published private(set) var activeRegion: OPGGRegion?
     @Published var regionPreference: String {
         didSet {
@@ -134,6 +163,7 @@ private final class OPGGSummonerClient: @unchecked Sendable {
 
     var isLoadingScreen: Bool { !rows.isEmpty && gameTime.isFinite && gameTime <= 1 }
     var isInGame: Bool { !rows.isEmpty && gameTime.isFinite && gameTime > 1 }
+    var showsRankedChampionUsage: Bool { GuideMode.from(liveMode: gameMode) == .ranked }
     var status: String {
         if statusKey == "scout-complete-with-failures" {
             let loaded = loadedProfileCount
@@ -163,7 +193,7 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     func stop() {
         pollTask?.cancel(); fetchTask?.cancel()
         pollTask = nil; fetchTask = nil
-        rows = []; matchSignature = ""; gameTime = .infinity; activeRegion = nil
+        rows = []; matchSignature = ""; gameTime = .infinity; gameMode = ""; activeRegion = nil
     }
 
     private func poll() async {
@@ -171,6 +201,7 @@ private final class OPGGSummonerClient: @unchecked Sendable {
             let state = try await live.lobbyState()
             guard !Task.isCancelled else { return }
             gameTime = state.game.gameTime
+            gameMode = state.game.gameMode
             let players = state.players.compactMap { player -> LobbyPlayerRow? in
                 guard let riotID = player.riotId, riotID.contains("#") else { return nil }
                 return LobbyPlayerRow(riotID: riotID, champion: player.championName,
@@ -288,6 +319,7 @@ private final class OPGGSummonerClient: @unchecked Sendable {
         rows = []
         matchSignature = ""
         gameTime = .infinity
+        gameMode = ""
         activeRegion = nil
         setStatus("等待加载界面的玩家名单…")
     }
