@@ -9,7 +9,7 @@
   <a href="https://loeraw.github.io/Wexi-LoL/"><img src="https://img.shields.io/badge/Website-Wexi%20LoL-6D28D9" alt="Wexi LoL website"></a>
   <a href="https://www.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-13%2B-000000?logo=apple" alt="macOS 13+"></a>
   <a href="https://www.swift.org/"><img src="https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&amp;logoColor=white" alt="Swift 5.9"></a>
-  <a href="https://github.com/Loeraw/Wexi-LoL/releases/tag/v0.5.5"><img src="https://img.shields.io/badge/release-v0.5.5-D26A3A" alt="Release v0.5.5"></a>
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/tag/v0.5.6"><img src="https://img.shields.io/badge/release-v0.5.6-D26A3A" alt="Release v0.5.6"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
 </p>
 
@@ -27,7 +27,7 @@ Wexi LoL is a native macOS companion overlay for League of Legends. It provides 
 ## 下载 / Download
 
 <p align="center">
-  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.5.5/Wexi.LoL-0.5.5.dmg">
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.5.6/Wexi.LoL-0.5.6.dmg">
     <img src="https://img.shields.io/badge/DOWNLOAD-LATEST-D2A53A?style=for-the-badge&amp;labelColor=555555" alt="Download latest Wexi LoL DMG">
   </a>
 </p>
@@ -46,6 +46,7 @@ The current build uses a local ad-hoc signature and has not been notarized by Ap
 | 出装推荐 | 显示 OP.GG 主流三件套、胜率、选用率和下一件装备；游戏内面板可随时收起和恢复 | Shows popular OP.GG three-item builds, win rate, pick rate, and the next item; the in-game panel can be collapsed and restored |
 | 模式面板 | 主界面按排位、大乱斗混乱、极地大乱斗和斗魂竞技场分别展示攻略；斗魂海克斯根据胜率与样本生成评级 | Separate guide panels for Ranked, ARAM: Mayhem, ARAM, and Arena; Arena augment tiers are calculated from win rate and sample size |
 | 玩家资料 | 自动识别当前区服，在 Loading 时读取本局 10 名玩家的段位、胜率和最近 5 场 W/L；排位 Tab 面板还显示前三常用英雄及使用率 | Auto-detects the current region and loads rank, win rate, and recent W/L for all 10 players; Ranked Tab panels also show each player's top three champions and usage rates |
+| 分辨率适配 | Loading 与 Tab 玩家卡片优先跟随 OCR 识别到的实际位置；超宽屏使用居中 16:9 区域，提示和面板会随游戏窗口缩放 | Loading and Tab player cards follow OCR-detected positions; ultrawide layouts use a centered 16:9 region, and hints and panels scale with the game window |
 | 多语言界面与识别 | Wexi 界面可选择 12 种语言；游戏客户端语言可独立选择 15 种，并加载对应 OP.GG 海克斯名称与 Vision OCR | Choose from 12 Wexi interface languages and independently select one of 15 game-client languages for localized OP.GG augment names and Vision OCR |
 
 正常提示窗口支持鼠标穿透，不会阻止点击技能或海克斯卡片；只有明确显示的收起/恢复按钮接收鼠标点击。游戏进入后台时，提示会自动隐藏。
@@ -163,19 +164,19 @@ swift test
 ./script/package_source.sh
 ```
 
-当前测试套件包含 58 项测试，其中三项公共网页冒烟测试需要单独提供本地 fixture。
+当前测试套件包含 61 项测试，其中三项公共网页冒烟测试需要单独提供本地 fixture。
 
-The current suite contains 58 tests. Three public-page smoke tests require optional local fixtures.
+The current suite contains 61 tests. Three public-page smoke tests require optional local fixtures.
 
 ## 已知限制 / Known Limitations
 
 - OP.GG 页面结构改变或网络异常时，对应功能可能暂时不可用。
-- OCR 可靠性会受到游戏分辨率、HUD 缩放、语言和界面变化影响。
+- Overlay 会根据 OCR 锚点、游戏窗口尺寸和宽高比自动适配；Riot 界面变化或极端 HUD 缩放仍可能影响识别。
 - 评级是英雄的静态统计评级，不会根据本局装备或已选海克斯重新计算。
 - 当前 DMG 未使用 Apple Developer ID 签名或公证。
 
 - OP.GG page changes or network failures may temporarily disable related features.
-- OCR reliability depends on game resolution, HUD scale, language, and UI changes.
+- The overlay adapts using OCR anchors, game-window size, and aspect ratio; Riot UI changes or extreme HUD scaling can still affect recognition.
 - Ratings are static champion statistics and are not recalculated from the current build or selected augments.
 - The current DMG is not signed with an Apple Developer ID or notarized.
 

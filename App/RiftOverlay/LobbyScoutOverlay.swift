@@ -229,6 +229,7 @@ private struct InGameScoutView: View {
     let opacity: Double
     let showsTopChampions: Bool
     let championNames: [String: String]
+    let scale: CGFloat
 
     var body: some View {
         GeometryReader { proxy in
@@ -236,6 +237,7 @@ private struct InGameScoutView: View {
                 InGamePlayerBadge(row: row, showsTopChampions: showsTopChampions,
                                   championNames: championNames)
                     .opacity(opacity)
+                    .scaleEffect(scale)
                     .position(position(for: row, size: proxy.size))
             }
         }
@@ -245,28 +247,36 @@ private struct InGameScoutView: View {
     private func position(for row: LobbyPlayerRow, size: CGSize) -> CGPoint {
         let teamRows = rows.filter { $0.team == row.team }
         let index = teamRows.firstIndex(where: { $0.riotID == row.riotID }) ?? 0
-        // Measured from the current 2560×1440 ARAM scoreboard. The layout is
-        // normalized, so the same row spacing scales with the game window.
+        // OCR supplies the real row center. Keep the measured 2560×1440 values
+        // only as a fallback for frames where a name is temporarily missed.
         let fallbackVisionY = 0.682 - Double(index) * 0.070
         let visionY = anchors[row.riotID]?.y ?? fallbackVisionY
-        // Leave the left column where it was already aligned. Put the right
-        // column beyond the scoreboard's augment slots while retaining a
-        // comfortable margin from the game-window edge.
-        let fallbackX = size.width * (row.team == "ORDER" ? 0.105 : 0.910)
-        let x = anchors[row.riotID].map { size.width * $0.x } ?? fallbackX
-        return CGPoint(x: x, y: size.height * (1 - visionY))
+        // The scoreboard remains centered in a 16:9 content area on ultrawide
+        // displays, so side cards follow that area rather than the screen edge.
+        let normalizedX = AdaptiveOverlayLayout.contentX(
+            row.team == "ORDER" ? 0.105 : 0.895,
+            width: Double(size.width), height: Double(size.height)
+        )
+        let badgeWidth: CGFloat = (showsTopChampions ? 196 : 164) * scale
+        let safeX = row.team == "ORDER"
+            ? max(CGFloat(normalizedX) * size.width, badgeWidth / 2 + 10 * scale)
+            : min(CGFloat(normalizedX) * size.width, size.width - badgeWidth / 2 - 10 * scale)
+        return CGPoint(x: safeX, y: size.height * (1 - visionY))
     }
 }
 
 private struct LoadingScoutCardsView: View {
     let rows: [LobbyPlayerRow]
+    let anchors: [String: HintAnchor]
     let opacity: Double
+    let scale: CGFloat
 
     var body: some View {
         GeometryReader { proxy in
             ForEach(rows) { row in
                 InGamePlayerBadge(row: row, showsTopChampions: false, championNames: [:])
                     .opacity(opacity)
+                    .scaleEffect(scale)
                     .position(position(for: row, size: proxy.size))
             }
         }
@@ -276,12 +286,20 @@ private struct LoadingScoutCardsView: View {
     private func position(for row: LobbyPlayerRow, size: CGSize) -> CGPoint {
         let teamRows = rows.filter { $0.team == row.team }
         let index = teamRows.firstIndex(where: { $0.riotID == row.riotID }) ?? 0
-        // Measured card centers for the current five-column loading layout.
-        let x = 0.190 + Double(index) * 0.154
+        // Name OCR gives the actual card column. When it is unavailable, map
+        // the old five-column layout into the centered 16:9 content region.
+        let fallbackX = AdaptiveOverlayLayout.contentX(
+            0.190 + Double(index) * 0.154,
+            width: Double(size.width), height: Double(size.height)
+        )
+        let x = anchors[row.riotID]?.x ?? fallbackX
         // Loading screen card rows occupy matching positions in the upper and
         // lower halves. Both badges sit at the same relative height inside the
         // portrait rather than letting the Dock-trimmed frame lift row two.
-        let y = row.team == "ORDER" ? 0.405 : 0.889
+        let fallbackY = row.team == "ORDER" ? 0.405 : 0.889
+        // Player names sit below the useful part of each portrait. Move the
+        // badge slightly above the recognized baseline so the name stays clear.
+        let y = anchors[row.riotID].map { 1 - min(0.96, $0.y + 0.055) } ?? fallbackY
         return CGPoint(x: size.width * x, y: size.height * y)
     }
 }
@@ -313,6 +331,8 @@ private struct LoadingScoutControlView: View {
     private var controlSignature = ""
     private var collapsed = false
     private var matchKey = ""
+    private var loadingAnchors: [String: HintAnchor] = [:]
+    private var scoreboardAnchors: [String: HintAnchor] = [:]
 
     func update(model: OverlayModel, store: LobbyScoutStore, guide: GuideStore,
                 recognition: AutoRecognition, game: GameSurface?) {
@@ -326,24 +346,38 @@ private struct LoadingScoutControlView: View {
         let tabIsHeld = CGEventSource.keyState(.combinedSessionState, key: 48)
         let showScoreboard = store.isInGame && tabIsHeld
         guard showLoading || showScoreboard else { hide(); return }
-        let currentMatchKey = store.rows.map(\.riotID).joined(separator: "|")
+        let currentMatchKey = store.rows.map { "\($0.team):\($0.riotID)" }.sorted().joined(separator: "|")
         if currentMatchKey != matchKey {
             matchKey = currentMatchKey; collapsed = false
+            loadingAnchors = [:]; scoreboardAnchors = [:]
         }
+        let recognizedAnchors = PlayerUIAnchorRecognition.anchors(
+            lines: recognition.scoreboardLines,
+            riotIDs: store.rows.map(\.riotID)
+        )
+        if showScoreboard, recognition.isScoreboardVisible {
+            scoreboardAnchors.merge(recognizedAnchors) { _, new in new }
+        }
+        else if showLoading { loadingAnchors.merge(recognizedAnchors) { _, new in new } }
         let panel = self.panel ?? makePanel()
+        let scale = CGFloat(AdaptiveOverlayLayout.scale(
+            width: Double(game.frame.width), height: Double(game.frame.height)
+        ))
         let championNames = Dictionary(uniqueKeysWithValues: guide.champions.map { ($0.id, $0.name) })
-        let nextSignature = "\(store.rows):\(store.status):\(collapsed):\(showScoreboard):\(store.showsRankedChampionUsage):\(championNames):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
+        let activeAnchors = showScoreboard ? scoreboardAnchors : loadingAnchors
+        let nextSignature = "\(store.rows):\(store.status):\(collapsed):\(showScoreboard):\(store.showsRankedChampionUsage):\(championNames):\(activeAnchors):\(scale):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
         if signature != nextSignature {
             signature = nextSignature
             if showScoreboard {
                 panel.contentView = NSHostingView(rootView: InGameScoutView(
-                    rows: store.rows, anchors: [:], opacity: model.opacity,
+                    rows: store.rows, anchors: scoreboardAnchors, opacity: model.opacity,
                     showsTopChampions: store.showsRankedChampionUsage,
-                    championNames: championNames
+                    championNames: championNames, scale: scale
                 ))
             } else {
                 panel.contentView = NSHostingView(rootView: LoadingScoutCardsView(
-                    rows: store.rows, opacity: model.opacity
+                    rows: store.rows, anchors: loadingAnchors,
+                    opacity: model.opacity, scale: scale
                 ))
             }
         }

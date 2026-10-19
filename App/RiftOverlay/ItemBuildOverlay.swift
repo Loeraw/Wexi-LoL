@@ -127,18 +127,26 @@ private struct ItemBuildOverlayControlView: View {
             return
         }
         let panel = self.panel ?? makePanel()
+        let scale = CGFloat(AdaptiveOverlayLayout.scale(
+            width: Double(game.frame.width), height: Double(game.frame.height)
+        ))
         let nextSignature = build.items.map { String($0.id) }.joined(separator: ",")
             + ":\(recognition.ownedItemIDs.sorted())"
-            + ":\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
+            + ":\(scale):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
         if signature != nextSignature {
             signature = nextSignature
-            panel.contentView = NSHostingView(rootView: ItemBuildOverlayView(
-                build: build, ownedItemIDs: recognition.ownedItemIDs, opacity: model.opacity
-            ))
+            panel.contentView = NSHostingView(rootView:
+                ItemBuildOverlayView(
+                    build: build, ownedItemIDs: recognition.ownedItemIDs, opacity: model.opacity
+                )
+                .scaleEffect(scale, anchor: .topLeading)
+                .frame(width: 342 * scale, height: 132 * scale, alignment: .topLeading)
+            )
         }
-        let size = NSSize(width: 342, height: 132)
+        let size = NSSize(width: 342 * scale, height: 132 * scale)
         let bounds = game.placementBounds
-        let frame = NSRect(x: bounds.minX + 18, y: bounds.maxY - size.height - 82,
+        let frame = NSRect(x: bounds.minX + 18 * scale,
+                           y: bounds.maxY - size.height - 82 * scale,
                            width: size.width, height: size.height)
         let level = NSWindow.Level(rawValue: max(Int(CGShieldingWindowLevel()) + 1, game.layer + 1))
         panel.level = level
@@ -156,10 +164,10 @@ private struct ItemBuildOverlayControlView: View {
                 toggle: { [weak self] in self?.toggleCollapsed() }
             ))
         }
-        let controlSize = NSSize(width: 26, height: 26)
+        let controlSize = NSSize(width: 26 * scale, height: 26 * scale)
         let controlFrame = NSRect(
-            x: collapsed ? frame.minX : frame.maxX - controlSize.width - 8,
-            y: frame.maxY - controlSize.height - 7,
+            x: collapsed ? frame.minX : frame.maxX - controlSize.width - 8 * scale,
+            y: frame.maxY - controlSize.height - 7 * scale,
             width: controlSize.width, height: controlSize.height
         )
         control.level = NSWindow.Level(rawValue: level.rawValue + 1)

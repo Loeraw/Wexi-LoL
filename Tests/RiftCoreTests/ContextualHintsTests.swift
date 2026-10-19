@@ -73,4 +73,33 @@ final class ContextualHintsTests: XCTestCase {
         XCTAssertEqual(stable.observe([2]), [1, 2])
         XCTAssertEqual(stable.observe([]), [])
     }
+
+    func testAdaptiveOverlayScaleIsBoundedAcrossResolutions() {
+        XCTAssertEqual(AdaptiveOverlayLayout.scale(width: 2560, height: 1440), 1, accuracy: 0.001)
+        XCTAssertEqual(AdaptiveOverlayLayout.scale(width: 1920, height: 1080), 0.8, accuracy: 0.001)
+        XCTAssertEqual(AdaptiveOverlayLayout.scale(width: 3840, height: 2160), 1.15, accuracy: 0.001)
+        XCTAssertEqual(AdaptiveOverlayLayout.scale(width: 0, height: 0), 1)
+    }
+
+    func testUltrawideLayoutUsesCenteredSixteenByNineContent() {
+        XCTAssertEqual(AdaptiveOverlayLayout.contentX(0.5, width: 3440, height: 1440), 0.5, accuracy: 0.001)
+        XCTAssertGreaterThan(AdaptiveOverlayLayout.contentX(0.1, width: 3440, height: 1440), 0.1)
+        XCTAssertLessThan(AdaptiveOverlayLayout.contentX(0.9, width: 3440, height: 1440), 0.9)
+        XCTAssertEqual(AdaptiveOverlayLayout.contentX(0.2, width: 1920, height: 1200), 0.2, accuracy: 0.001)
+    }
+
+    func testPlayerAnchorsMatchRiotIDNamesAndKeepLinesUnique() {
+        let lines = [
+            line("Player One", x: 0.24, y: 0.67),
+            line("[TAG] 第二位", x: 0.76, y: 0.53),
+            line("Player One More", x: 0.75, y: 0.46)
+        ]
+        let anchors = PlayerUIAnchorRecognition.anchors(
+            lines: lines,
+            riotIDs: ["Player One#EUW", "第二位#1234", "Player One More#NA1"]
+        )
+        XCTAssertEqual(anchors["Player One#EUW"], HintAnchor(x: 0.24, y: 0.67))
+        XCTAssertEqual(anchors["第二位#1234"], HintAnchor(x: 0.76, y: 0.53))
+        XCTAssertEqual(anchors["Player One More#NA1"], HintAnchor(x: 0.75, y: 0.46))
+    }
 }

@@ -5,17 +5,19 @@ import Vision
 public enum GameFrameRecognition {
     private static func applyLanguages(_ preferred: [String], to request: VNRecognizeTextRequest) {
         let supported = (try? request.supportedRecognitionLanguages()) ?? []
-        let available = preferred.filter(supported.contains)
+        var seen = Set<String>()
+        let available = preferred.filter { supported.contains($0) && seen.insert($0).inserted }
         request.recognitionLanguages = available.isEmpty ? ["en-US"] : available
     }
-    public static func scoreboardLines(image: CGImage) throws -> [RecognizedLine] {
+    public static func scoreboardLines(image: CGImage,
+                                       recognitionLanguages: [String] = ["en-US", "zh-Hans"]) throws -> [RecognizedLine] {
         // The ARAM relic countdown cells sit against the very top edge while
         // Tab is held. Keep the full height; downstream recognition uses the
         // central scoreboard density to reject ordinary HUD text.
         let region = CGRect(x: 0.04, y: 0, width: 0.92, height: 1)
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
-        request.recognitionLanguages = ["en-US", "zh-Hans"]
+        applyLanguages(recognitionLanguages + ["en-US"], to: request)
         request.usesLanguageCorrection = false
         request.minimumTextHeight = 0.004
         request.regionOfInterest = region

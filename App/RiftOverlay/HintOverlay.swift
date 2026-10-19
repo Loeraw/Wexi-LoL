@@ -67,15 +67,16 @@ private final class HintPanel: NSPanel {
 private struct HintBadge: View {
     let text: String
     let calibration: Bool
+    let scale: CGFloat
     var body: some View {
-        Text(text).font(.system(size: calibration ? 14 : 15, weight: .bold, design: .rounded))
+        Text(text).font(.system(size: (calibration ? 14 : 15) * scale, weight: .bold, design: .rounded))
             .lineLimit(1)
             .minimumScaleFactor(0.6)
             .foregroundStyle(calibration ? Color.white : Color(red: 0.4, green: 0.95, blue: 0.78))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.black.opacity(0.85), in: RoundedRectangle(cornerRadius: 7))
-            .overlay(RoundedRectangle(cornerRadius: 7).stroke(calibration ? .orange : .mint, lineWidth: 1.5))
-            .padding(2)
+            .background(Color.black.opacity(0.85), in: RoundedRectangle(cornerRadius: 7 * scale))
+            .overlay(RoundedRectangle(cornerRadius: 7 * scale).stroke(calibration ? .orange : .mint, lineWidth: 1.5))
+            .padding(2 * scale)
     }
 }
 
@@ -176,6 +177,11 @@ private struct HintBadge: View {
     }
     private func show(id: String, text: String, anchor: HintAnchor, offset: CGFloat, size: NSSize,
                       game: GameSurface, calibration: Bool, opacity: Double) {
+        let scale = CGFloat(AdaptiveOverlayLayout.scale(
+            width: Double(game.frame.width), height: Double(game.frame.height)
+        ))
+        let displaySize = NSSize(width: size.width * scale, height: size.height * scale)
+        let displayOffset = offset * scale
         let panel: HintPanel
         if let existing = panels[id] { panel = existing }
         else {
@@ -192,12 +198,16 @@ private struct HintBadge: View {
         panel.alphaValue = opacity
         let level = NSWindow.Level(rawValue: max(Int(CGShieldingWindowLevel()) + 1, game.layer + 1))
         if panel.level != level { panel.level = level }
-        if texts[id] != text {
-            panel.contentView = NSHostingView(rootView: HintBadge(text: text, calibration: calibration)); texts[id] = text
+        let contentSignature = "\(text)|\(scale)"
+        if texts[id] != contentSignature {
+            panel.contentView = NSHostingView(rootView: HintBadge(
+                text: text, calibration: calibration, scale: scale
+            ))
+            texts[id] = contentSignature
         }
-        let frame = NSRect(x: min(game.frame.maxX - size.width, max(game.frame.minX, game.frame.minX + anchor.x * game.frame.width - size.width / 2)),
-                           y: min(game.frame.maxY - size.height, max(game.frame.minY, game.frame.minY + anchor.y * game.frame.height + offset - size.height / 2)),
-                           width: size.width, height: size.height)
+        let frame = NSRect(x: min(game.frame.maxX - displaySize.width, max(game.frame.minX, game.frame.minX + anchor.x * game.frame.width - displaySize.width / 2)),
+                           y: min(game.frame.maxY - displaySize.height, max(game.frame.minY, game.frame.minY + anchor.y * game.frame.height + displayOffset - displaySize.height / 2)),
+                           width: displaySize.width, height: displaySize.height)
         if panel.frame != frame {
             placementInProgress = true; panel.setFrame(frame, display: true); placementInProgress = false
         }

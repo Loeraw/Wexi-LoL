@@ -10,25 +10,26 @@ private final class ObjectiveTimerPanel: NSPanel {
 private struct ObjectiveTimerList: View {
     let rows: [ObjectiveCountdown]
     let opacity: Double
+    let scale: CGFloat
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                HStack(spacing: 8) {
-                    Image(systemName: icon(row.kind)).frame(width: 16).foregroundStyle(color(row.kind))
+                HStack(spacing: 8 * scale) {
+                    Image(systemName: icon(row.kind)).frame(width: 16 * scale).foregroundStyle(color(row.kind))
                     Text(label(row)).lineLimit(1)
                     Spacer(minLength: 12)
                     Text(clock(row.remaining)).monospacedDigit().foregroundStyle(.white)
                 }
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.system(size: 13 * scale, weight: .semibold, design: .rounded))
             }
         }
         .foregroundStyle(.white.opacity(0.92))
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .frame(width: 194)
-        .background(Color.black.opacity(0.86 * opacity), in: RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.13), lineWidth: 1))
+        .padding(.horizontal, 12 * scale)
+        .padding(.vertical, 9 * scale)
+        .frame(width: 194 * scale)
+        .background(Color.black.opacity(0.86 * opacity), in: RoundedRectangle(cornerRadius: 10 * scale))
+        .overlay(RoundedRectangle(cornerRadius: 10 * scale).stroke(Color.white.opacity(0.13), lineWidth: 1))
     }
 
     private func label(_ row: ObjectiveCountdown) -> String {
@@ -72,6 +73,7 @@ private struct ObjectiveTimerList: View {
 private struct HealthRelicMapTimers: View {
     let rows: [ObjectiveCountdown]
     let opacity: Double
+    let scale: CGFloat
     // Normalized pad centers measured from the in-game Bridge of Progress
     // minimap. Values use bottom-left map coordinates, blue to red.
     private let anchors: [(x: Double, y: Double)] = [
@@ -94,12 +96,12 @@ private struct HealthRelicMapTimers: View {
             ForEach(timers, id: \.slot) { timer in
                 let anchor = anchors[timer.slot - 1]
                 Text(clock(timer.remaining))
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .font(.system(size: 13 * scale, weight: .heavy, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(.white)
                     .shadow(color: .black, radius: 1, x: 0, y: 1)
-                    .padding(.horizontal, 5).padding(.vertical, 2)
-                    .background(Color.black.opacity(0.82 * opacity), in: RoundedRectangle(cornerRadius: 5))
+                    .padding(.horizontal, 5 * scale).padding(.vertical, 2 * scale)
+                    .background(Color.black.opacity(0.82 * opacity), in: RoundedRectangle(cornerRadius: 5 * scale))
                     .position(x: proxy.size.width * anchor.x,
                               y: proxy.size.height * (1 - anchor.y))
             }
@@ -121,14 +123,21 @@ private struct HealthRelicMapTimers: View {
             return
         }
         let panel = self.panel ?? makePanel()
+        let scale = CGFloat(AdaptiveOverlayLayout.scale(
+            width: Double(game.frame.width), height: Double(game.frame.height)
+        ))
         let nextSignature = store.rows.map { "\($0.kind.rawValue):\($0.slot ?? 0):\($0.remaining)" }.joined(separator: "|")
-            + ":\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
+            + ":\(scale):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
         if signature != nextSignature {
             signature = nextSignature
             if store.isAram {
-                panel.contentView = NSHostingView(rootView: HealthRelicMapTimers(rows: store.rows, opacity: model.opacity))
+                panel.contentView = NSHostingView(rootView: HealthRelicMapTimers(
+                    rows: store.rows, opacity: model.opacity, scale: scale
+                ))
             } else {
-                panel.contentView = NSHostingView(rootView: ObjectiveTimerList(rows: store.rows, opacity: model.opacity))
+                panel.contentView = NSHostingView(rootView: ObjectiveTimerList(
+                    rows: store.rows, opacity: model.opacity, scale: scale
+                ))
             }
         }
         let frame: NSRect
@@ -140,8 +149,11 @@ private struct HealthRelicMapTimers: View {
             frame = NSRect(x: bounds.maxX - side, y: bounds.minY, width: side, height: side)
         } else {
             let bounds = game.placementBounds
-            let height = CGFloat(store.rows.count * 28 + 18)
-            frame = NSRect(x: bounds.maxX - 210, y: bounds.maxY - height - 82, width: 194, height: height)
+            let height = CGFloat(store.rows.count * 28 + 18) * scale
+            let width = 194 * scale
+            frame = NSRect(x: bounds.maxX - width - 16 * scale,
+                           y: bounds.maxY - height - 82 * scale,
+                           width: width, height: height)
         }
         let level = NSWindow.Level(rawValue: max(Int(CGShieldingWindowLevel()) + 1, game.layer + 1))
         panel.level = level

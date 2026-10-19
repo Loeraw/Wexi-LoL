@@ -92,7 +92,9 @@ actor CardScanner {
         // visible so augment recognition keeps priority.
         let shouldProbeRelics = scanRelics && cards.isEmpty && Date().timeIntervalSince(relicProbeAt) >= 0.35
         if shouldProbeRelics { relicProbeAt = Date() }
-        let scoreboardLines = shouldProbeRelics ? try GameFrameRecognition.scoreboardLines(image: image) : []
+        let scoreboardLines = shouldProbeRelics ? try GameFrameRecognition.scoreboardLines(
+            image: image, recognitionLanguages: recognitionLanguages
+        ) : []
         let relicScan = shouldProbeRelics ? HealthRelicRecognition.scan(lines: scoreboardLines) : nil
         let relicSummary = relicScan.map { " · 计分板 \($0.scoreboardVisible ? "已读取" : "未展开") · 血包 \($0.readings.count)" } ?? ""
         let summary = "\(usedFallback ? "兼容扫描" : "标题快速扫描") · 卡片 \(cards.count)/3 · \(exact ? "本帧确认" : "等待确认")\(relicSummary) · \(String(format: "%.2f", Date().timeIntervalSince(started))) 秒"

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VERSION="0.5.5"
+VERSION="0.5.6"
 PACKAGE_NAME="Wexi-LoL-source-$VERSION"
 OUTPUT="$ROOT_DIR/dist/$PACKAGE_NAME.zip"
 STAGING="$(mktemp -d "${TMPDIR:-/tmp}/wexilol-source.XXXXXX")"
