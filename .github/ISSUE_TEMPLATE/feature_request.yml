@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest an improvement for Wexi LoL
+title: "[Feature] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What League for macOS workflow would this improve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe what should appear or happen from the player's perspective.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature area
+      options:
+        - Augment recognition
+        - Skill recommendations
+        - Recommended builds
+        - Objective or health-relic timers
+        - Loading or Tab player scouting
+        - Languages and localization
+        - Settings and window behavior
+        - Packaging, installation, or website
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Project boundaries
+      options:
+        - label: This request does not require game injection, process-memory reading, or automated game input.
+          required: true
+

@@ -1,0 +1,96 @@
+name: Bug report
+description: Report a reproducible Wexi LoL problem
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Please remove Riot IDs, player names, tokens, cookies, and other private information from logs and images.
+        感谢反馈。上传日志或图片前，请删除 Riot ID、玩家姓名、令牌、Cookie 和其他私人信息。
+  - type: input
+    id: version
+    attributes:
+      label: Wexi LoL version
+      placeholder: "0.5.6"
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and Mac model
+      placeholder: "macOS 15.1, MacBook Pro 14-inch"
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Game mode
+      options:
+        - Ranked / Summoner's Rift
+        - ARAM
+        - ARAM: Mayhem
+        - Arena
+        - Practice Tool
+        - Loading screen / League client
+        - Not in game
+    validations:
+      required: true
+  - type: input
+    id: resolution
+    attributes:
+      label: Resolution, window mode, and display setup
+      description: Include game resolution, fullscreen/windowed mode, external displays, and display scaling.
+      placeholder: "2560x1440 fullscreen, one external display at 2x scaling"
+    validations:
+      required: true
+  - type: input
+    id: hud
+    attributes:
+      label: HUD and minimap scale
+      placeholder: "HUD 100%, minimap 75%"
+  - type: input
+    id: language
+    attributes:
+      label: Wexi language and League client language
+      placeholder: "Wexi: English; League: Français"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the actual result and where the overlay appeared.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start Wexi LoL
+        2. Enter...
+        3. Hold Tab...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Optional. Paste relevant output from ~/Library/Application Support/WexiLoL/status.json after removing private information.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I removed player identities, tokens, cookies, and other private information.
+          required: true
+
