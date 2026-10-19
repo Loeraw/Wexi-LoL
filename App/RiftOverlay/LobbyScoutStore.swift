@@ -42,6 +42,7 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     private enum FetchError: Error {
         case httpStatus(Int)
         case invalidHTML
+        case identityMismatch
     }
 
     init() {
@@ -72,14 +73,16 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     private func fetchOnce(riotID: String, region: OPGGRegion) async throws -> SummonerProfile {
         guard let url = SummonerProfileURL.make(riotID: riotID, region: region) else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
-        request.setValue("WexiLoL/0.5.4", forHTTPHeaderField: "User-Agent")
+        request.setValue("WexiLoL/0.5.5", forHTTPHeaderField: "User-Agent")
         request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
         request.setValue("text/html,application/xhtml+xml", forHTTPHeaderField: "Accept")
         let (data, response) = try await session.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         guard http.statusCode == 200 else { throw FetchError.httpStatus(http.statusCode) }
         guard let html = String(data: data, encoding: .utf8), !html.isEmpty else { throw FetchError.invalidHTML }
-        return try SummonerProfileParser.parse(html)
+        let profile = try SummonerProfileParser.parse(html)
+        guard RiotIDIdentity.matches(profile.riotID, riotID) else { throw FetchError.identityMismatch }
+        return profile
     }
 
     private func isTransient(_ error: Error) -> Bool {
@@ -119,6 +122,7 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     private var cache: [String: (Date, SummonerProfile)] = [:]
     private var detectedRegion: OPGGRegion?
     private var lastRegionDetection = Date.distantPast
+    private var lastSuccessfulPoll = Date.distantPast
 
     var loadedProfileCount: Int { rows.lazy.filter { $0.profile != nil }.count }
     var failedProfileCount: Int { rows.lazy.filter(\.failed).count }
@@ -172,7 +176,11 @@ private final class OPGGSummonerClient: @unchecked Sendable {
                 return LobbyPlayerRow(riotID: riotID, champion: player.championName,
                                       team: player.team ?? "", profile: nil)
             }
-            guard players.count >= 2 else { return }
+            guard players.count >= 2 else {
+                if Date().timeIntervalSince(lastSuccessfulPoll) > 4 { clearCurrentMatch() }
+                return
+            }
+            lastSuccessfulPoll = Date()
             guard let region = await resolveRegion(players: players) else {
                 rows = players
                 activeRegion = nil
@@ -183,7 +191,13 @@ private final class OPGGSummonerClient: @unchecked Sendable {
             // The ten Riot IDs define the match cache. Champion labels can be
             // represented differently after loading; they must not trigger a
             // second OP.GG fetch when the live game begins.
-            let signature = region.rawValue + "|" + players.map { "\($0.team):\($0.riotID)" }.joined(separator: "|")
+            // Riot's player-list endpoint can return the same ten players in a
+            // different order between polls. Match identity must be independent
+            // of that order or the loading overlay will clear and refetch rows.
+            let identities = players.map { "\($0.team):\($0.riotID)" }.sorted {
+                $0.localizedCaseInsensitiveCompare($1) == .orderedAscending
+            }
+            let signature = region.rawValue + "|" + identities.joined(separator: "|")
             if signature != matchSignature {
                 matchSignature = signature
                 fetchTask?.cancel()
@@ -198,7 +212,14 @@ private final class OPGGSummonerClient: @unchecked Sendable {
             }
         } catch {
             guard !Task.isCancelled else { return }
-            if !gameTime.isFinite { setStatus("等待加载界面的玩家名单…") }
+            // Do not let the previous match remain on screen after Riot's local
+            // endpoint has disappeared. A short grace period covers ordinary
+            // loading-to-game connection hand-offs.
+            if Date().timeIntervalSince(lastSuccessfulPoll) > 4 {
+                clearCurrentMatch()
+            } else if !gameTime.isFinite {
+                setStatus("等待加载界面的玩家名单…")
+            }
         }
     }
 
@@ -260,5 +281,14 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     private func setStatus(_ key: String, _ values: Int...) {
         statusKey = key
         statusValues = values
+    }
+
+    private func clearCurrentMatch() {
+        fetchTask?.cancel()
+        rows = []
+        matchSignature = ""
+        gameTime = .infinity
+        activeRegion = nil
+        setStatus("等待加载界面的玩家名单…")
     }
 }

@@ -59,11 +59,40 @@ public struct SummonerProfile: Equatable, Sendable {
     public let losses: Int
     public let winRate: Double?
     public let recent: [RecentMatchResult]
+    /// Time at which OP.GG says this profile snapshot was last refreshed.
+    public let updatedAt: Date?
 
     public init(riotID: String, tier: String, leaguePoints: Int?, wins: Int, losses: Int,
-                winRate: Double?, recent: [RecentMatchResult]) {
+                winRate: Double?, recent: [RecentMatchResult], updatedAt: Date? = nil) {
         self.riotID = riotID; self.tier = tier; self.leaguePoints = leaguePoints
         self.wins = wins; self.losses = losses; self.winRate = winRate; self.recent = recent
+        self.updatedAt = updatedAt
+    }
+
+    public func isStale(referenceDate: Date = Date(), maxAge: TimeInterval = 36 * 60 * 60) -> Bool {
+        guard let updatedAt else { return true }
+        return referenceDate.timeIntervalSince(updatedAt) > maxAge
+    }
+}
+
+public enum RiotIDIdentity {
+    /// OP.GG may return the canonical capitalization or Unicode width for a Riot ID.
+    /// Keep accents significant because they can identify different accounts.
+    public static func matches(_ lhs: String, _ rhs: String) -> Bool {
+        guard let lhs = components(lhs), let rhs = components(rhs) else { return false }
+        return normalized(lhs.name) == normalized(rhs.name) && normalized(lhs.tag) == normalized(rhs.tag)
+    }
+
+    private static func components(_ value: String) -> (name: String, tag: String)? {
+        guard let hash = value.lastIndex(of: "#"), hash != value.startIndex,
+              hash < value.index(before: value.endIndex) else { return nil }
+        return (String(value[..<hash]), String(value[value.index(after: hash)...]))
+    }
+
+    private static func normalized(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+            .precomposedStringWithCanonicalMapping
+            .folding(options: [.caseInsensitive, .widthInsensitive], locale: Locale(identifier: "en_US_POSIX"))
     }
 }
 
@@ -92,8 +121,10 @@ public enum SummonerProfileParser {
             // player just because it contains unrelated structured data.
             throw SummonerProfileParseError.missingStructuredData
         }
-        let description = graph.first { ($0["@type"] as? String) == "ProfilePage" }?["description"] as? String ?? ""
+        let profilePage = graph.first { ($0["@type"] as? String) == "ProfilePage" }
+        let description = profilePage?["description"] as? String ?? ""
         let rank = parseRank(description)
+        let updatedAt = (profilePage?["dateModified"] as? String).flatMap(parseDate)
 
         let recentList = graph.first {
             ($0["@type"] as? String) == "ItemList" && (($0["@id"] as? String)?.hasSuffix("#recent-games") == true)
@@ -111,7 +142,15 @@ public enum SummonerProfileParser {
         }
         return SummonerProfile(riotID: riotID, tier: rank.tier, leaguePoints: rank.lp,
                                wins: rank.wins, losses: rank.losses, winRate: rank.winRate,
-                               recent: Array(recent.prefix(10)))
+                               recent: Array(recent.prefix(10)), updatedAt: updatedAt)
+    }
+
+    private static func parseDate(_ value: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: value) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: value)
     }
 
     private static func parseRank(_ description: String) -> (tier: String, lp: Int?, wins: Int, losses: Int, winRate: Double?) {

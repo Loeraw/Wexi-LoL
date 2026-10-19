@@ -32,6 +32,12 @@ private struct LobbyPlayerView: View {
                     .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundStyle(rateColor(profile.winRate)).frame(width: 36, alignment: .trailing)
                 recent(profile.recent)
+                if profile.isStale() {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 8)).foregroundStyle(.orange)
+                        .help(L10n.text("OP.GG 资料可能已过期"))
+                        .accessibilityLabel(L10n.text("OP.GG 资料可能已过期"))
+                }
             } else if row.failed {
                 Text(L10n.text("无公开数据")).font(.system(size: 10)).foregroundStyle(.secondary)
                 Spacer()
@@ -157,6 +163,12 @@ private struct InGamePlayerBadge: View {
                     Text(shortRank(profile))
                     Text(profile.winRate.map { String(format: "%.0f%%", $0) } ?? "—")
                         .foregroundStyle(rateColor(profile.winRate))
+                    if profile.isStale() {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 9)).foregroundStyle(.orange)
+                            .help(L10n.text("OP.GG 资料可能已过期"))
+                            .accessibilityLabel(L10n.text("OP.GG 资料可能已过期"))
+                    }
                 }
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 HStack(spacing: 5) {

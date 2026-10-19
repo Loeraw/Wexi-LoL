@@ -45,7 +45,7 @@ cat > "$BUNDLE/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>Wexi LoL</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleIconFile</key><string>WexiLoL</string>
-<key>CFBundleShortVersionString</key><string>0.5.4</string>
+<key>CFBundleShortVersionString</key><string>0.5.5</string>
 <key>CFBundleVersion</key><string>7</string>
 <key>LSMinimumSystemVersion</key><string>13.0</string>
 <key>NSPrincipalClass</key><string>NSApplication</string>
