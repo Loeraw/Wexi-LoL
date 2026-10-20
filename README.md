@@ -13,6 +13,18 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
 </p>
 
+## 下载 / Download
+
+<p align="center">
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.6.0/Wexi.LoL-0.6.0.dmg">
+    <img src="https://img.shields.io/badge/DOWNLOAD-LATEST-D2A53A?style=for-the-badge&amp;labelColor=555555" alt="Download latest Wexi LoL DMG">
+  </a>
+</p>
+
+当前安装包使用本地 ad-hoc 签名，尚未经过 Apple 公证。macOS 首次打开时可能显示安全提示，可前往“系统设置 → 隐私与安全性”选择“仍要打开”。
+
+The current build uses a local ad-hoc signature and has not been notarized by Apple. On first launch, macOS may block the app. Open **System Settings → Privacy & Security** and choose **Open Anyway**.
+
 Wexi LoL 是一款原生 macOS 英雄联盟游戏内辅助悬浮工具，提供海克斯评级、技能加点提示、目标计时、出装推荐和对局玩家资料。
 
 Wexi LoL is a native macOS companion overlay for League of Legends. It provides augment ratings, skill-up suggestions, objective timers, item-build recommendations, and player scouting.
@@ -35,18 +47,6 @@ Wexi LoL is a native macOS companion overlay for League of Legends. It provides 
   <img src="docs/images/wexi-augment-overlay-0.6.0.png" alt="Wexi LoL augment ratings with pick rate and win rate" width="900">
 </p>
 <p align="center"><em>海克斯评级、选用率与胜率 / Augment ratings, pick rate, and win rate</em></p>
-
-## 下载 / Download
-
-<p align="center">
-  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.6.0/Wexi.LoL-0.6.0.dmg">
-    <img src="https://img.shields.io/badge/DOWNLOAD-LATEST-D2A53A?style=for-the-badge&amp;labelColor=555555" alt="Download latest Wexi LoL DMG">
-  </a>
-</p>
-
-当前安装包使用本地 ad-hoc 签名，尚未经过 Apple 公证。macOS 首次打开时可能显示安全提示，可前往“系统设置 → 隐私与安全性”选择“仍要打开”。
-
-The current build uses a local ad-hoc signature and has not been notarized by Apple. On first launch, macOS may block the app. Open **System Settings → Privacy & Security** and choose **Open Anyway**.
 
 ## 功能 / Features
 
