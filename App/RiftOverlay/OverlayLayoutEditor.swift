@@ -177,7 +177,7 @@ private struct LayoutPreviewView: View {
         case .playerScout:
             return CGRect(x: bounds.midX - 433, y: bounds.midY - 95, width: 866, height: 190)
         case .jungleRoute:
-            let side = min(bounds.width * 0.151, bounds.height * 0.268)
+            let side = min(bounds.width * 0.146, bounds.height * 0.260)
             return CGRect(x: bounds.maxX - side, y: bounds.minY, width: side, height: side)
         }
     }

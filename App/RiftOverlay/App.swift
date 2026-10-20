@@ -170,7 +170,7 @@ final class ControlWindow: NSWindow {}
         hints.update(model: model, guide: guide, recognition: recognition, calibration: calibration, layouts: overlayLayouts)
         objectiveTimers.refreshDisplay()
         objectiveTimerOverlay.update(store: objectiveTimers, model: model,
-                                     layouts: overlayLayouts, game: game)
+                                     layouts: overlayLayouts, minimapFrame: recognition.minimapFrame, game: game)
         itemBuildOverlay.update(model: model, guide: guide, recognition: recognition, calibration: calibration,
                                 layouts: overlayLayouts, game: game)
         lobbyScoutOverlay.update(model: model, store: lobbyScout, guide: guide, recognition: recognition,
@@ -180,7 +180,8 @@ final class ControlWindow: NSWindow {}
                                   // state after entering a match. ObjectiveTimerStore keeps
                                   // polling Riot's live game mode, so it is the reliable source
                                   // for an in-game jungle overlay.
-                                  gameMode: objectiveTimers.mode, activeTeam: objectiveTimers.activeTeam, game: game)
+                                  gameMode: objectiveTimers.mode, activeTeam: objectiveTimers.activeTeam,
+                                  minimapFrame: recognition.minimapFrame, game: game)
         // One small local status file, overwritten every two seconds. No screenshots,
         // OCR text, account names or player identifiers are recorded.
         if Date().timeIntervalSince(lastDiagnosticWrite) >= 2 {
@@ -204,6 +205,9 @@ final class ControlWindow: NSWindow {}
                 "jungleRouteEnabled": jungleRoute.enabled,
                 "jungleRouteMode": objectiveTimers.mode,
                 "jungleRouteTeam": objectiveTimers.activeTeam,
+                "minimapFrame": recognition.minimapFrame.map {
+                    ["x": $0.minX, "y": $0.minY, "width": $0.width, "height": $0.height]
+                } ?? NSNull(),
                 "recommendation": recognition.recommendedSkill ?? "none",
                 "anchors": recognition.skillAnchors.mapValues { ["x": $0.x, "y": $0.y] },
                 "cards": recognition.cardHints.map(\.id)

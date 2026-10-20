@@ -68,7 +68,11 @@ private struct JungleRouteMapView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let positions = points.map { CGPoint(x: $0.x * proxy.size.width, y: (1 - $0.y) * proxy.size.height) }
+            let inset = min(proxy.size.width, proxy.size.height) * 0.045
+            let mapWidth = max(1, proxy.size.width - inset * 2)
+            let mapHeight = max(1, proxy.size.height - inset * 2)
+            let positions = points.map { CGPoint(x: inset + $0.x * mapWidth,
+                                                  y: inset + (1 - $0.y) * mapHeight) }
             ZStack {
                 Canvas { context, _ in
                     guard let first = positions.first else { return }
@@ -92,13 +96,13 @@ private struct JungleRouteMapView: View {
     private var panel: JungleRoutePanel?
     private var signature = ""
     func update(store: JungleRouteStore, model: OverlayModel, layouts: OverlayLayoutStore,
-                gameMode: String, activeTeam: String, game: GameSurface?) {
+                gameMode: String, activeTeam: String, minimapFrame: CGRect?, game: GameSurface?) {
         guard store.enabled, gameMode.uppercased() == "CLASSIC", let game, game.foreground else { hide(); return }
         let panel = self.panel ?? makePanel()
         let layout = layouts.adjustment(for: .jungleRoute, frame: game.frame)
         let bounds = game.frame
-        let baseSide = min(bounds.width * 0.151, bounds.height * 0.268)
-        let side = baseSide * layout.scale * model.overlayScale
+        let detected = game.minimapBounds(normalized: minimapFrame)
+        let side = min(detected.width, detected.height) * layout.scale
         let next = "\(store.side.rawValue):\(store.route.rawValue):\(activeTeam):\(side):\(layout.opacity):\(model.opacity)"
         if signature != next {
             signature = next
@@ -107,8 +111,8 @@ private struct JungleRouteMapView: View {
                 opacity: model.opacity * layout.opacity
             ))
         }
-        let frame = CGRect(x: bounds.maxX - side + layout.offsetX * bounds.width,
-                           y: bounds.minY + layout.offsetY * bounds.height, width: side, height: side)
+        let frame = CGRect(x: detected.maxX - side + layout.offsetX * bounds.width,
+                           y: detected.minY + layout.offsetY * bounds.height, width: side, height: side)
         panel.level = NSWindow.Level(rawValue: max(Int(CGShieldingWindowLevel()) + 1, game.layer + 1))
         if panel.frame != frame { panel.setFrame(frame, display: true) }
         panel.alphaValue = model.opacity * layout.opacity

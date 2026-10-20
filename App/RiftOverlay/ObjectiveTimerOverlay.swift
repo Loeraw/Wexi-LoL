@@ -117,7 +117,8 @@ private struct HealthRelicMapTimers: View {
     private var panel: ObjectiveTimerPanel?
     private var signature = ""
 
-    func update(store: ObjectiveTimerStore, model: OverlayModel, layouts: OverlayLayoutStore, game: GameSurface?) {
+    func update(store: ObjectiveTimerStore, model: OverlayModel, layouts: OverlayLayoutStore,
+                minimapFrame: CGRect?, game: GameSurface?) {
         guard store.enabled, !store.rows.isEmpty, let game, game.foreground else {
             panel?.orderOut(nil)
             return
@@ -145,9 +146,7 @@ private struct HealthRelicMapTimers: View {
         if store.isAram {
             // The HUD is anchored to the full game window. placementBounds
             // excludes the macOS Dock and shifts the overlay up and right.
-            let bounds = game.frame
-            let side = min(bounds.width * 0.151, bounds.height * 0.268)
-            frame = NSRect(x: bounds.maxX - side, y: bounds.minY, width: side, height: side)
+            frame = game.minimapBounds(normalized: minimapFrame)
         } else {
             let bounds = game.placementBounds
             let height = CGFloat(store.rows.count * 28 + 18) * scale

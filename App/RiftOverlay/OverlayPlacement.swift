@@ -34,5 +34,18 @@ import AppKit
         let intersection = screen.visibleFrame.intersection(frame)
         return intersection.isNull ? screen.visibleFrame : intersection
     }
+
+    func minimapBounds(normalized: CGRect?) -> CGRect {
+        if let normalized,
+           normalized.width > 0.05, normalized.height > 0.08,
+           normalized.maxX <= 1.01, normalized.maxY <= 1.01 {
+            return CGRect(x: frame.minX + normalized.minX * frame.width,
+                          y: frame.minY + normalized.minY * frame.height,
+                          width: normalized.width * frame.width,
+                          height: normalized.height * frame.height)
+        }
+        let side = min(frame.width * 0.146, frame.height * 0.260)
+        return CGRect(x: frame.maxX - side, y: frame.minY, width: side, height: side)
+    }
 }
 

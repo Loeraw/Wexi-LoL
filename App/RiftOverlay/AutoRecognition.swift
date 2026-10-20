@@ -25,6 +25,7 @@ struct ScannedHints: Sendable {
     var windowLayer: Int = 0
     var relicScan: HealthRelicScan? = nil
     var scoreboardLines: [RecognizedLine] = []
+    var minimapFrame: CGRect? = nil
 }
 
 actor CardScanner {
@@ -33,6 +34,8 @@ actor CardScanner {
     private var windowUpdatedAt = Date.distantPast
     private var fallbackAt = Date.distantPast
     private var relicProbeAt = Date.distantPast
+    private var minimapProbeAt = Date.distantPast
+    private var cachedMinimapFrame: CGRect?
 
     @available(macOS 14.0, *)
     func scan(pid: pid_t, catalog: [AugmentRating], recognitionLanguages: [String],
@@ -96,12 +99,17 @@ actor CardScanner {
             image: image, recognitionLanguages: recognitionLanguages
         ) : []
         let relicScan = shouldProbeRelics ? HealthRelicRecognition.scan(lines: scoreboardLines) : nil
+        if Date().timeIntervalSince(minimapProbeAt) >= 1 {
+            minimapProbeAt = Date()
+            cachedMinimapFrame = MinimapFrameRecognition.normalizedFrame(image: image)
+        }
         let relicSummary = relicScan.map { " · 计分板 \($0.scoreboardVisible ? "已读取" : "未展开") · 血包 \($0.readings.count)" } ?? ""
         let summary = "\(usedFallback ? "兼容扫描" : "标题快速扫描") · 卡片 \(cards.count)/3 · \(exact ? "本帧确认" : "等待确认")\(relicSummary) · \(String(format: "%.2f", Date().timeIntervalSince(started))) 秒"
         return ScannedHints(cards: cards, skillAnchors: anchors, summary: summary, exactTriple: exact,
                             choiceVisible: choiceVisible,
                             windowFrame: window.frame, windowLayer: window.windowLayer, relicScan: relicScan,
-                            scoreboardLines: scoreboardLines)
+                            scoreboardLines: scoreboardLines,
+                            minimapFrame: cachedMinimapFrame)
     }
 }
 
@@ -119,6 +127,7 @@ actor CardScanner {
     @Published private(set) var scoreboardVisible = false
     @Published private(set) var scoreboardLines: [RecognizedLine] = []
     @Published private(set) var scoreboardRevision = 0
+    @Published private(set) var minimapFrame: CGRect?
     private var capturedFrame: CGRect?
     private var capturedPID: pid_t?
     private var capturedLayer = 0
@@ -257,6 +266,7 @@ actor CardScanner {
             guide.recognized = confirmed.map(\.id)
             cardHints = confirmed
             skillAnchors = result.skillAnchors
+            minimapFrame = result.minimapFrame
             capturedFrame = result.windowFrame; capturedLayer = result.windowLayer; capturedPID = pid
             frameUpdatedAt = Date()
             if let relicScan = result.relicScan {
