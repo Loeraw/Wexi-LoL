@@ -12,10 +12,15 @@ final class ControlWindow: NSWindow {}
     let objectiveTimers = ObjectiveTimerStore()
     let lobbyScout = LobbyScoutStore()
     let updateChecker = UpdateChecker()
+    let overlayLayouts = OverlayLayoutStore()
+    let jungleRoute = JungleRouteStore()
+    let postGame = PostGameStore()
     private let hints = HintOverlayController()
     private let objectiveTimerOverlay = ObjectiveTimerOverlayController()
     private let itemBuildOverlay = ItemBuildOverlayController()
     private let lobbyScoutOverlay = LobbyScoutOverlayController()
+    private let layoutEditor = OverlayLayoutEditorController()
+    private let jungleRouteOverlay = JungleRouteOverlayController()
     private var controls: NSWindow!
     private var statusItem: NSStatusItem!
     private var hotkeys: [EventHotKeyRef] = []
@@ -33,9 +38,12 @@ final class ControlWindow: NSWindow {}
         controls.isReleasedWhenClosed = false
         controls.contentView = NSHostingView(rootView: GuideControlView(model: model, guide: guide, recognition: recognition,
             calibration: calibration, objectiveTimers: objectiveTimers, lobbyScout: lobbyScout,
-            updateChecker: updateChecker, displayedVersion: displayedVersion,
+            updateChecker: updateChecker, overlayLayouts: overlayLayouts, jungleRoute: jungleRoute, postGame: postGame,
+            displayedVersion: displayedVersion,
             startCalibration: { [weak self] in self?.startCalibration() },
-            copyDiagnostics: { [weak self] in self?.copyDiagnostics() }))
+            startLayoutEditing: { [weak self] in self?.startLayoutEditing() },
+            copyDiagnostics: { [weak self] in self?.copyDiagnostics() },
+            openBugReport: { [weak self] in self?.openBugReport() }))
         controls.center()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         updateLanguage()
@@ -48,7 +56,7 @@ final class ControlWindow: NSWindow {}
         }
         if let layoutTimer { RunLoop.main.add(layoutTimer, forMode: .common) }
         registerHotkeys()
-        guide.load(); recognition.start(guide: guide, objectiveTimers: objectiveTimers); objectiveTimers.start(); lobbyScout.start()
+        guide.load(); recognition.start(guide: guide, objectiveTimers: objectiveTimers); objectiveTimers.start(); lobbyScout.start(); postGame.start()
         updateChecker.check(currentVersion: displayedVersion)
         updateHints()
         if !CGPreflightScreenCaptureAccess() {
@@ -94,6 +102,12 @@ final class ControlWindow: NSWindow {}
     @objc func finishCalibration() { calibration.finish(); updateHints() }
     @objc func cancelCalibration() { calibration.cancel(); updateHints() }
     @objc func toggleCalibration() { if calibration.active { finishCalibration() } else { startCalibration() } }
+    private func startLayoutEditing() {
+        let frame = (recognition.capturedGameSurface ?? GameSurface.current())?.frame
+            ?? controls.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1440, height: 900)
+        overlayLayouts.begin(frame: frame)
+        updateHints()
+    }
     @objc func quitApp() { NSApp.terminate(nil) }
     private func diagnosticStatus() -> [String: Any] {
         let game = recognition.capturedGameSurface ?? GameSurface.current()
@@ -132,16 +146,35 @@ final class ControlWindow: NSWindow {}
         pasteboard.setString(report, forType: .string)
         model.diagnosticStatus = "诊断信息已复制；不包含截图或玩家名称。"
     }
+    private func openBugReport() {
+        guard let data = try? JSONSerialization.data(withJSONObject: diagnosticStatus(), options: [.prettyPrinted, .sortedKeys]),
+              let report = String(data: data, encoding: .utf8) else { return }
+        var components = URLComponents(string: "https://github.com/Loeraw/Wexi-LoL/issues/new")!
+        components.queryItems = [
+            URLQueryItem(name: "title", value: "Bug: "),
+            URLQueryItem(name: "body", value: "## 问题描述 / Description\n\n\n## 复现步骤 / Steps\n1. \n\n## 诊断信息 / Diagnostics\n```json\n\(report)\n```\n\n> This report excludes screenshots, OCR text, and player names.")
+        ]
+        if let url = components.url { NSWorkspace.shared.open(url) }
+    }
     @objc func updateHints() {
         recognition.pauseForApplicationChange()
-        hints.update(model: model, guide: guide, recognition: recognition, calibration: calibration)
+        let game = recognition.capturedGameSurface ?? GameSurface.current()
+        let editorTarget = game?.frame ?? controls.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
+        layoutEditor.update(store: overlayLayouts, target: editorTarget)
+        if overlayLayouts.isEditing {
+            hints.hideAll(); objectiveTimerOverlay.hide(); itemBuildOverlay.hide(); lobbyScoutOverlay.hide(); jungleRouteOverlay.hide()
+            return
+        }
+        hints.update(model: model, guide: guide, recognition: recognition, calibration: calibration, layouts: overlayLayouts)
         objectiveTimers.refreshDisplay()
         objectiveTimerOverlay.update(store: objectiveTimers, model: model,
-                                     game: recognition.capturedGameSurface ?? GameSurface.current())
+                                     layouts: overlayLayouts, game: game)
         itemBuildOverlay.update(model: model, guide: guide, recognition: recognition, calibration: calibration,
-                                game: recognition.capturedGameSurface ?? GameSurface.current())
+                                layouts: overlayLayouts, game: game)
         lobbyScoutOverlay.update(model: model, store: lobbyScout, guide: guide, recognition: recognition,
-                                 game: recognition.capturedGameSurface ?? GameSurface.current())
+                                 layouts: overlayLayouts, game: game)
+        jungleRouteOverlay.update(store: jungleRoute, model: model, layouts: overlayLayouts,
+                                  gameMode: lobbyScout.gameMode, game: game)
         // One small local status file, overwritten every two seconds. No screenshots,
         // OCR text, account names or player identifiers are recorded.
         if Date().timeIntervalSince(lastDiagnosticWrite) >= 2 {
@@ -202,7 +235,7 @@ final class ControlWindow: NSWindow {}
         showControls(); return true
     }
     func applicationWillTerminate(_ notification: Notification) {
-        recognition.stop(); objectiveTimers.stop(); lobbyScout.stop(); hints.hideAll(); objectiveTimerOverlay.hide(); itemBuildOverlay.hide(); lobbyScoutOverlay.hide()
+        recognition.stop(); objectiveTimers.stop(); lobbyScout.stop(); postGame.stop(); hints.hideAll(); objectiveTimerOverlay.hide(); itemBuildOverlay.hide(); lobbyScoutOverlay.hide(); jungleRouteOverlay.hide(); layoutEditor.hide()
         layoutTimer?.invalidate()
         hotkeys.forEach { UnregisterEventHotKey($0) }
         if let handler { RemoveEventHandler(handler) }

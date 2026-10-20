@@ -101,13 +101,15 @@ private struct HintBadge: View {
     }
     func hideAll() { panels.values.forEach { $0.orderOut(nil) } }
 
-    func update(model: OverlayModel, guide: GuideStore, recognition: AutoRecognition, calibration: SkillCalibration) {
+    func update(model: OverlayModel, guide: GuideStore, recognition: AutoRecognition, calibration: SkillCalibration,
+                layouts: OverlayLayoutStore) {
         self.calibration = calibration
         guard let game = recognition.capturedGameSurface ?? GameSurface.current(), game.foreground else {
             hideAll(); gameFrame = nil; retainedCards = []; cardsLastSeenAt = .distantPast
             setStatus("等待游戏前台 · 提示已隐藏", model: model); return
         }
         gameFrame = game.frame
+        let layout = layouts.adjustment(for: .hints, frame: game.frame)
         let aspect = game.frame.width / game.frame.height
         calibration.currentAspect = aspect
         var shown = Set<String>()
@@ -116,7 +118,7 @@ private struct HintBadge: View {
                 if let anchor = calibration.anchors[key] {
                     show(id: "cal-" + key, text: key + L10n.text(" ＋ 拖动"), anchor: anchor, offset: 0,
                          size: NSSize(width: 84, height: 30), game: game, calibration: true, opacity: 1,
-                         scalePreference: model.overlayScale)
+                         scalePreference: model.overlayScale * layout.scale, layout: layout)
                     shown.insert("cal-" + key)
                 }
             }
@@ -145,7 +147,8 @@ private struct HintBadge: View {
                     let hasRates = augment.pickRate != nil || augment.winRate != nil
                     show(id: id, text: augmentHintText(augment), anchor: card.anchor, offset: 0,
                          size: NSSize(width: hasRates ? 248 : 42, height: 28),
-                         game: game, calibration: false, opacity: model.opacity, scalePreference: model.overlayScale)
+                         game: game, calibration: false, opacity: model.opacity * layout.opacity,
+                         scalePreference: model.overlayScale * layout.scale, layout: layout)
                     shown.insert(id)
                 }
             } else if let skill = recognition.recommendedSkill {
@@ -153,7 +156,8 @@ private struct HintBadge: View {
                 if let anchor {
                     show(id: "skill", text: L10n.text("推荐 %@ ↓", skill), anchor: anchor, offset: 27,
                          size: NSSize(width: 90, height: 28), game: game, calibration: false,
-                         opacity: model.opacity, scalePreference: model.overlayScale)
+                         opacity: model.opacity * layout.opacity, scalePreference: model.overlayScale * layout.scale,
+                         layout: layout)
                     shown.insert("skill")
                 }
             }
@@ -181,7 +185,8 @@ private struct HintBadge: View {
         return parts.joined(separator: " · ")
     }
     private func show(id: String, text: String, anchor: HintAnchor, offset: CGFloat, size: NSSize,
-                      game: GameSurface, calibration: Bool, opacity: Double, scalePreference: Double) {
+                      game: GameSurface, calibration: Bool, opacity: Double, scalePreference: Double,
+                      layout: OverlayLayoutAdjustment) {
         let scale = CGFloat(AdaptiveOverlayLayout.scale(
             width: Double(game.frame.width), height: Double(game.frame.height), preference: scalePreference
         ))
@@ -210,8 +215,8 @@ private struct HintBadge: View {
             ))
             texts[id] = contentSignature
         }
-        let frame = NSRect(x: min(game.frame.maxX - displaySize.width, max(game.frame.minX, game.frame.minX + anchor.x * game.frame.width - displaySize.width / 2)),
-                           y: min(game.frame.maxY - displaySize.height, max(game.frame.minY, game.frame.minY + anchor.y * game.frame.height + displayOffset - displaySize.height / 2)),
+        let frame = NSRect(x: min(game.frame.maxX - displaySize.width, max(game.frame.minX, game.frame.minX + anchor.x * game.frame.width - displaySize.width / 2 + layout.offsetX * game.frame.width)),
+                           y: min(game.frame.maxY - displaySize.height, max(game.frame.minY, game.frame.minY + anchor.y * game.frame.height + displayOffset - displaySize.height / 2 + layout.offsetY * game.frame.height)),
                            width: displaySize.width, height: displaySize.height)
         if panel.frame != frame {
             placementInProgress = true; panel.setFrame(frame, display: true); placementInProgress = false

@@ -107,7 +107,7 @@ private struct ItemBuildOverlayControlView: View {
     private var wasEnabled = true
 
     func update(model: OverlayModel, guide: GuideStore, recognition: AutoRecognition,
-                calibration: SkillCalibration, game: GameSurface?) {
+                calibration: SkillCalibration, layouts: OverlayLayoutStore, game: GameSurface?) {
         guard model.itemBuildEnabled else {
             wasEnabled = false
             hide()
@@ -127,12 +127,13 @@ private struct ItemBuildOverlayControlView: View {
             return
         }
         let panel = self.panel ?? makePanel()
+        let layout = layouts.adjustment(for: .itemBuild, frame: game.frame)
         let scale = CGFloat(AdaptiveOverlayLayout.scale(
-            width: Double(game.frame.width), height: Double(game.frame.height), preference: model.overlayScale
+            width: Double(game.frame.width), height: Double(game.frame.height), preference: model.overlayScale * layout.scale
         ))
         let nextSignature = build.items.map { String($0.id) }.joined(separator: ",")
             + ":\(recognition.ownedItemIDs.sorted())"
-            + ":\(scale):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
+            + ":\(scale):\(layout.opacity):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
         if signature != nextSignature {
             signature = nextSignature
             panel.contentView = NSHostingView(rootView:
@@ -148,10 +149,11 @@ private struct ItemBuildOverlayControlView: View {
         let frame = NSRect(x: bounds.minX + 18 * scale,
                            y: bounds.maxY - size.height - 82 * scale,
                            width: size.width, height: size.height)
+            .offsetBy(dx: layout.offsetX * game.frame.width, dy: layout.offsetY * game.frame.height)
         let level = NSWindow.Level(rawValue: max(Int(CGShieldingWindowLevel()) + 1, game.layer + 1))
         panel.level = level
         if panel.frame != frame { panel.setFrame(frame, display: true) }
-        panel.alphaValue = model.opacity
+        panel.alphaValue = model.opacity * layout.opacity
         if collapsed { panel.orderOut(nil) }
         else { panel.orderFrontRegardless() }
 
@@ -172,7 +174,7 @@ private struct ItemBuildOverlayControlView: View {
         )
         control.level = NSWindow.Level(rawValue: level.rawValue + 1)
         if control.frame != controlFrame { control.setFrame(controlFrame, display: true) }
-        control.alphaValue = model.opacity
+        control.alphaValue = model.opacity * layout.opacity
         control.orderFrontRegardless()
     }
 

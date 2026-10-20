@@ -117,17 +117,18 @@ private struct HealthRelicMapTimers: View {
     private var panel: ObjectiveTimerPanel?
     private var signature = ""
 
-    func update(store: ObjectiveTimerStore, model: OverlayModel, game: GameSurface?) {
+    func update(store: ObjectiveTimerStore, model: OverlayModel, layouts: OverlayLayoutStore, game: GameSurface?) {
         guard store.enabled, !store.rows.isEmpty, let game, game.foreground else {
             panel?.orderOut(nil)
             return
         }
         let panel = self.panel ?? makePanel()
+        let layout = layouts.adjustment(for: .objectiveTimers, frame: game.frame)
         let scale = CGFloat(AdaptiveOverlayLayout.scale(
-            width: Double(game.frame.width), height: Double(game.frame.height), preference: model.overlayScale
+            width: Double(game.frame.width), height: Double(game.frame.height), preference: model.overlayScale * layout.scale
         ))
         let nextSignature = store.rows.map { "\($0.kind.rawValue):\($0.slot ?? 0):\($0.remaining)" }.joined(separator: "|")
-            + ":\(scale):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
+            + ":\(scale):\(layout.opacity):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
         if signature != nextSignature {
             signature = nextSignature
             if store.isAram {
@@ -157,8 +158,9 @@ private struct HealthRelicMapTimers: View {
         }
         let level = NSWindow.Level(rawValue: max(Int(CGShieldingWindowLevel()) + 1, game.layer + 1))
         panel.level = level
-        if panel.frame != frame { panel.setFrame(frame, display: true) }
-        panel.alphaValue = model.opacity
+        let adjustedFrame = frame.offsetBy(dx: layout.offsetX * game.frame.width, dy: layout.offsetY * game.frame.height)
+        if panel.frame != adjustedFrame { panel.setFrame(adjustedFrame, display: true) }
+        panel.alphaValue = model.opacity * layout.opacity
         panel.orderFrontRegardless()
     }
 

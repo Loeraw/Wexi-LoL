@@ -270,14 +270,24 @@ private struct LoadingScoutCardsView: View {
     let anchors: [String: HintAnchor]
     let opacity: Double
     let scale: CGFloat
+    let ranked: Bool
+    let skillPriority: [String]
+    let buildRoutes: [ItemBuild]
 
     var body: some View {
         GeometryReader { proxy in
-            ForEach(rows) { row in
-                InGamePlayerBadge(row: row, showsTopChampions: false, championNames: [:])
-                    .opacity(opacity)
-                    .scaleEffect(scale)
-                    .position(position(for: row, size: proxy.size))
+            ZStack {
+                ForEach(rows) { row in
+                    InGamePlayerBadge(row: row, showsTopChampions: false, championNames: [:])
+                        .opacity(opacity)
+                        .scaleEffect(scale)
+                        .position(position(for: row, size: proxy.size))
+                }
+                if ranked {
+                    RankedPregameSummaryView(rows: rows, skillPriority: skillPriority, buildRoutes: buildRoutes)
+                        .opacity(opacity).scaleEffect(scale)
+                        .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
+                }
             }
         }
         .preferredColorScheme(.dark)
@@ -302,6 +312,76 @@ private struct LoadingScoutCardsView: View {
         let y = anchors[row.riotID].map { 1 - min(0.96, $0.y + 0.055) } ?? fallbackY
         return CGPoint(x: size.width * x, y: size.height * y)
     }
+}
+
+private struct RankedPregameSummaryView: View {
+    let rows: [LobbyPlayerRow]
+    let skillPriority: [String]
+    let buildRoutes: [ItemBuild]
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(L10n.text("排位赛前分析")).font(.system(size: 13, weight: .bold))
+            HStack(spacing: 16) {
+                team("ORDER", title: L10n.text("蓝方"), color: .cyan)
+                team("CHAOS", title: L10n.text("红方"), color: .red)
+            }
+            HStack(spacing: 16) {
+                composition("ORDER").frame(maxWidth: .infinity, alignment: .leading)
+                composition("CHAOS").frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if !skillPriority.isEmpty {
+                Text(L10n.text("技能优先：%@", skillPriority.joined(separator: " › "))).font(.system(size: 10))
+            }
+            ForEach(Array(buildRoutes.prefix(2).enumerated()), id: \.offset) { index, route in
+                Text(L10n.text("出装分支 %d：%@", index + 1, route.items.map(\.name).joined(separator: " › ")))
+                    .font(.system(size: 9)).lineLimit(1)
+            }
+        }
+        .padding(11).frame(width: 430, alignment: .leading)
+        .foregroundStyle(.white.opacity(0.94))
+        .background(Color.black.opacity(0.86), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.16), lineWidth: 1))
+    }
+
+    private func team(_ team: String, title: String, color: Color) -> some View {
+        let teamRows = rows.filter { $0.team == team }
+        let rates = teamRows.compactMap { $0.profile?.winRate }
+        let average = rates.isEmpty ? nil : rates.reduce(0, +) / Double(rates.count)
+        let recentWins = teamRows.compactMap(\.profile).flatMap(\.recent).filter { $0 == .win }.count
+        let comfort = teamRows.filter { row in
+            row.profile?.topChampions.contains(where: {
+                $0.key.caseInsensitiveCompare(row.champion) == .orderedSame ||
+                $0.name.caseInsensitiveCompare(row.champion) == .orderedSame
+            }) == true
+        }.count
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(title).foregroundStyle(color).font(.system(size: 10, weight: .bold))
+            Text(L10n.text("平均胜率 %@ · 近况 %dW", average.map { String(format: "%.1f%%", $0) } ?? "—", recentWins))
+            Text(L10n.text("常用英雄 %d/%d", comfort, teamRows.count))
+        }.font(.system(size: 9))
+    }
+
+    private func composition(_ team: String) -> some View {
+        let champions = rows.filter { $0.team == team }.map { normalized($0.champion) }
+        let ap = champions.filter { Self.magic.contains($0) }.count
+        let ad = max(0, champions.count - ap)
+        let frontline = champions.filter { Self.frontline.contains($0) }.count
+        let control = champions.filter { Self.control.contains($0) }.count
+        let sustain = champions.filter { Self.sustain.contains($0) }.count
+        return Text(L10n.text("AD/AP %d/%d · 控制 %d · 前排 %d · 治疗 %d", ad, ap, control, frontline, sustain))
+            .font(.system(size: 8)).foregroundStyle(.secondary)
+    }
+
+    private func normalized(_ value: String) -> String {
+        value.lowercased().filter { $0.isLetter || $0.isNumber }
+    }
+
+    // Lightweight composition hints. They are deliberately conservative and
+    // describe likely damage/utility profiles rather than prescribing picks.
+    private static let magic: Set<String> = ["ahri","akali","anivia","annie","aurelionsol","azir","brand","cassiopeia","diana","ekko","elise","evelynn","fiddlesticks","fizz","galio","gragas","gwen","heimerdinger","hwei","karthus","kassadin","katarina","kennen","leblanc","lillia","lissandra","lux","malphite","malzahar","morgana","neeko","nidalee","orianna","rumble","ryze","seraphine","shaco","singed","swain","sylas","syndra","taliyah","teemo","twistedfate","veigar","velkoz","vex","viktor","vladimir","xerath","ziggs","zoe","zyra"]
+    private static let frontline: Set<String> = ["alistar","amumu","blitzcrank","braum","chogath","drmundo","galio","garen","gnar","gragas","ksante","leona","malphite","maokai","nautilus","nunu","ornn","poppy","rammus","rell","renekton","sejuani","shen","singed","skarner","sion","tahmkench","taric","udyr","volibear","warwick","zac"]
+    private static let control: Set<String> = ["ahri","alistar","amumu","anivia","annie","ashe","blitzcrank","braum","cassiopeia","fiddlesticks","galio","gragas","janna","leona","lissandra","lux","malphite","maokai","morgana","nautilus","neeko","nunu","orianna","ornn","poppy","rammus","rell","renata","sejuani","seraphine","shen","skarner","sona","syndra","taliyah","thresh","veigar","velkoz","vex","zac","zyra"]
+    private static let sustain: Set<String> = ["aatrox","briar","drmundo","fiora","gwen","illaoi","irelia","janna","milio","nami","nilah","renata","senna","seraphine","soraka","sona","swain","sylas","taric","vladimir","warwick","yuumi"]
 }
 
 private struct LoadingScoutControlView: View {
@@ -335,7 +415,7 @@ private struct LoadingScoutControlView: View {
     private var scoreboardAnchors: [String: HintAnchor] = [:]
 
     func update(model: OverlayModel, store: LobbyScoutStore, guide: GuideStore,
-                recognition: AutoRecognition, game: GameSurface?) {
+                recognition: AutoRecognition, layouts: OverlayLayoutStore, game: GameSurface?) {
         guard model.playerScoutEnabled, !store.rows.isEmpty, let game, game.foreground else {
             hide(); return
         }
@@ -360,12 +440,13 @@ private struct LoadingScoutControlView: View {
         }
         else if showLoading { loadingAnchors.merge(recognizedAnchors) { _, new in new } }
         let panel = self.panel ?? makePanel()
+        let layout = layouts.adjustment(for: .playerScout, frame: game.frame)
         let scale = CGFloat(AdaptiveOverlayLayout.scale(
-            width: Double(game.frame.width), height: Double(game.frame.height), preference: model.overlayScale
+            width: Double(game.frame.width), height: Double(game.frame.height), preference: model.overlayScale * layout.scale
         ))
         let championNames = Dictionary(uniqueKeysWithValues: guide.champions.map { ($0.id, $0.name) })
         let activeAnchors = showScoreboard ? scoreboardAnchors : loadingAnchors
-        let nextSignature = "\(store.rows):\(store.status):\(collapsed):\(showScoreboard):\(store.showsRankedChampionUsage):\(championNames):\(activeAnchors):\(scale):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
+        let nextSignature = "\(store.rows):\(store.status):\(collapsed):\(showScoreboard):\(store.showsRankedChampionUsage):\(championNames):\(activeAnchors):\(scale):\(layout):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"
         if signature != nextSignature {
             signature = nextSignature
             if showScoreboard {
@@ -373,12 +454,13 @@ private struct LoadingScoutControlView: View {
                     rows: store.rows, anchors: scoreboardAnchors, opacity: model.opacity,
                     showsTopChampions: store.showsRankedChampionUsage,
                     championNames: championNames, scale: scale
-                ))
+                ).offset(x: layout.offsetX * game.frame.width, y: -layout.offsetY * game.frame.height))
             } else {
                 panel.contentView = NSHostingView(rootView: LoadingScoutCardsView(
                     rows: store.rows, anchors: loadingAnchors,
-                    opacity: model.opacity, scale: scale
-                ))
+                    opacity: model.opacity, scale: scale, ranked: store.showsRankedChampionUsage,
+                    skillPriority: guide.skills?.priority ?? [], buildRoutes: guide.itemBuilds
+                ).offset(x: layout.offsetX * game.frame.width, y: -layout.offsetY * game.frame.height))
             }
         }
         // Loading cards, like the in-game scoreboard, are laid out against the
@@ -389,7 +471,7 @@ private struct LoadingScoutControlView: View {
         let frame = NSRect(origin: bounds.origin, size: bounds.size)
         panel.level = level
         if panel.frame != frame { panel.setFrame(frame, display: true) }
-        panel.alphaValue = model.opacity
+        panel.alphaValue = model.opacity * layout.opacity
         panel.ignoresMouseEvents = true
         if showScoreboard || !collapsed { panel.orderFrontRegardless() }
         else { panel.orderOut(nil) }
@@ -404,10 +486,11 @@ private struct LoadingScoutControlView: View {
                     toggle: { [weak self] in self?.toggle() }
                 ))
             }
-            let controlFrame = NSRect(x: bounds.maxX - 158, y: bounds.maxY - 46, width: 140, height: 32)
+            let controlFrame = NSRect(x: bounds.maxX - 158 + layout.offsetX * bounds.width,
+                                      y: bounds.maxY - 46 + layout.offsetY * bounds.height, width: 140, height: 32)
             control.level = NSWindow.Level(rawValue: level.rawValue + 1)
             if control.frame != controlFrame { control.setFrame(controlFrame, display: true) }
-            control.alphaValue = model.opacity
+            control.alphaValue = model.opacity * layout.opacity
             control.orderFrontRegardless()
         } else {
             controlPanel?.orderOut(nil)

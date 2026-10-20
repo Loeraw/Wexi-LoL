@@ -48,6 +48,10 @@ The current build uses a local ad-hoc signature and has not been notarized by Ap
 | 玩家资料 | 自动识别当前区服，在 Loading 时读取本局 10 名玩家的段位、胜率和最近 5 场 W/L；排位 Tab 面板还显示前三常用英雄及使用率 | Auto-detects the current region and loads rank, win rate, and recent W/L for all 10 players; Ranked Tab panels also show each player's top three champions and usage rates |
 | 分辨率适配 | Loading 与 Tab 玩家卡片优先跟随 OCR 识别到的实际位置；超宽屏使用居中 16:9 区域，提示和面板会随游戏窗口缩放，并可在设置中统一调整大小 | Loading and Tab player cards follow OCR-detected positions; ultrawide layouts use a centered 16:9 region, and hints and panels scale with the game window with an adjustable global size |
 | 更新与诊断 | 启动时检查 GitHub Release 新版本；设置页可复制不含截图、OCR 文字或玩家名称的诊断信息 | Checks GitHub Releases for updates at launch; Settings can copy diagnostics that exclude screenshots, OCR text, and player names |
+| 布局编辑器 | 预览并分别拖动、缩放五类 Overlay，独立调整透明度，按游戏窗口分辨率保存或恢复默认布局 | Preview, move, resize, and adjust opacity for five overlay groups, with layouts saved per game-window resolution |
+| 排位赛前分析 | Loading 界面汇总双方平均胜率、近期胜场和常用英雄匹配，并显示技能优先级与两条出装分支 | Ranked loading screen summarizes team win rates, recent form, comfort picks, skill priority, and two build paths |
+| 个人赛后复盘 | 仅在本机记录自己的 KDA、补刀、视野与时长，显示最近十局趋势并给出数据驱动的改进建议 | Locally records only your KDA, CS, vision, and duration, then shows a ten-game trend and metric-based advice |
+| 打野路线 | 可选择蓝/红起手和全清、三级抓人或反向入侵，在召唤师峡谷小地图显示可视路线 | Choose Blue/Red start and full-clear, level-three gank, or reverse-invade routes shown visually on the Rift minimap |
 | 多语言界面与识别 | Wexi 界面可选择 12 种语言；游戏客户端语言可独立选择 15 种，并加载对应 OP.GG 海克斯名称与 Vision OCR | Choose from 12 Wexi interface languages and independently select one of 15 game-client languages for localized OP.GG augment names and Vision OCR |
 
 正常提示窗口支持鼠标穿透，不会阻止点击技能或海克斯卡片；只有明确显示的收起/恢复按钮接收鼠标点击。游戏进入后台时，提示会自动隐藏。

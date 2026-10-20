@@ -111,9 +111,14 @@ struct GuideControlView: View {
     @ObservedObject var objectiveTimers: ObjectiveTimerStore
     @ObservedObject var lobbyScout: LobbyScoutStore
     @ObservedObject var updateChecker: UpdateChecker
+    @ObservedObject var overlayLayouts: OverlayLayoutStore
+    @ObservedObject var jungleRoute: JungleRouteStore
+    @ObservedObject var postGame: PostGameStore
     let displayedVersion: String
     let startCalibration: () -> Void
+    let startLayoutEditing: () -> Void
     let copyDiagnostics: () -> Void
+    let openBugReport: () -> Void
     @State private var showingSettings = false
 
     var body: some View {
@@ -315,6 +320,42 @@ struct GuideControlView: View {
                     }
                 }
 
+                settingsSection(L10n.text("Overlay 布局编辑器")) {
+                    HStack {
+                        Picker(L10n.text("面板"), selection: $overlayLayouts.selected) {
+                            ForEach(OverlayLayoutKind.allCases) { kind in Text(L10n.text(kind.titleKey)).tag(kind) }
+                        }
+                        .pickerStyle(.menu)
+                        Spacer()
+                        Text(overlayLayouts.resolutionLabel).font(.caption).foregroundStyle(.secondary)
+                    }
+                    let adjustment = overlayLayouts.activeAdjustment(for: overlayLayouts.selected)
+                    HStack(spacing: 14) {
+                        Text(L10n.text("面板缩放")).frame(width: 90, alignment: .leading)
+                        Slider(value: Binding(
+                            get: { overlayLayouts.activeAdjustment(for: overlayLayouts.selected).scale },
+                            set: { value in overlayLayouts.update(overlayLayouts.selected) { $0.scale = value } }
+                        ), in: 0.6...1.6, step: 0.05)
+                        Text("\(Int(adjustment.scale * 100))%").monospacedDigit().foregroundStyle(.secondary).frame(width: 42)
+                    }
+                    HStack(spacing: 14) {
+                        Text(L10n.text("面板透明度")).frame(width: 90, alignment: .leading)
+                        Slider(value: Binding(
+                            get: { overlayLayouts.activeAdjustment(for: overlayLayouts.selected).opacity },
+                            set: { value in overlayLayouts.update(overlayLayouts.selected) { $0.opacity = value } }
+                        ), in: 0.3...1, step: 0.05)
+                        Text("\(Int(adjustment.opacity * 100))%").monospacedDigit().foregroundStyle(.secondary).frame(width: 42)
+                    }
+                    HStack {
+                        Button(L10n.text(overlayLayouts.isEditing ? "完成布局编辑" : "开始预览布局")) {
+                            if overlayLayouts.isEditing { overlayLayouts.finish() } else { startLayoutEditing() }
+                        }
+                        Button(L10n.text("恢复当前分辨率默认布局")) { overlayLayouts.resetCurrentResolution() }
+                    }
+                    Text(L10n.text("预览框可拖动并从边缘缩放；位置、大小和透明度会按当前游戏窗口分辨率保存。"))
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+
                 settingsSection(L10n.text("更新")) {
                     HStack {
                         Text(L10n.text("当前版本 %@", displayedVersion))
@@ -373,6 +414,18 @@ struct GuideControlView: View {
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                 }
 
+                settingsSection(L10n.text("打野路线")) {
+                    Toggle(L10n.text("在小地图显示打野路线"), isOn: $jungleRoute.enabled)
+                    Picker(L10n.text("起手野区"), selection: $jungleRoute.side) {
+                        ForEach(JungleStartSide.allCases) { option in Text(L10n.text(option.titleKey)).tag(option) }
+                    }
+                    Picker(L10n.text("路线方案"), selection: $jungleRoute.route) {
+                        ForEach(JungleRouteChoice.allCases) { option in Text(L10n.text(option.titleKey)).tag(option) }
+                    }
+                    Text(L10n.text("路线只提供可视参考，不会控制英雄或替玩家做出决定；仅在召唤师峡谷显示。"))
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+
                 settingsSection(L10n.text("出装推荐")) {
                     Toggle(L10n.text("显示推荐出装与胜率"), isOn: $model.itemBuildEnabled)
                     Text(L10n.text("根据当前已购买的核心装备匹配 OP.GG 主流三件套，并标出下一件；胜率是该完整路线的统计。"))
@@ -404,6 +457,19 @@ struct GuideControlView: View {
                     Text(lobbyScout.status).font(.system(size: 11)).foregroundStyle(.secondary)
                 }
 
+                settingsSection(L10n.text("个人赛后复盘")) {
+                    Text(L10n.text(postGame.status)).font(.caption).foregroundStyle(.secondary)
+                    HStack { Text(L10n.text("最近十局趋势")); Spacer(); Text(postGame.recentAverage).foregroundStyle(guideMint) }
+                    if let record = postGame.records.first {
+                        Text("\(record.champion.uppercased()) · \(record.kills)/\(record.deaths)/\(record.assists) · " +
+                             String(format: "%.1f CS/min · %.2f vision/min", record.csPerMinute, record.visionPerMinute))
+                            .font(.system(size: 11, design: .monospaced))
+                        Text(postGame.advice(for: record)).font(.system(size: 11)).foregroundStyle(.secondary)
+                    }
+                    Text(L10n.text("只记录自己的本机对局摘要，不分析被隐藏的玩家；记录保存在本机。"))
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+
                 settingsSection(L10n.text("技能提示")) {
                     Text(L10n.text(calibration.message)).font(.system(size: 12)).foregroundStyle(.secondary)
                     HStack {
@@ -421,7 +487,10 @@ struct GuideControlView: View {
                         .font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(4)
                     if !model.hotkeyStatus.isEmpty { Text(L10n.text(model.hotkeyStatus)).font(.caption).foregroundStyle(.orange) }
                     Divider()
-                    Button(L10n.text("复制诊断信息"), action: copyDiagnostics)
+                    HStack {
+                        Button(L10n.text("复制诊断信息"), action: copyDiagnostics)
+                        Button(L10n.text("打开 GitHub 问题报告"), action: openBugReport)
+                    }
                     Text(L10n.text("复制应用状态、权限、窗口尺寸和加载结果，便于排查问题；不包含截图、OCR 文字或玩家名称。"))
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                     if !model.diagnosticStatus.isEmpty {
