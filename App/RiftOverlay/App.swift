@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Carbon
+import Combine
 
 final class ControlWindow: NSWindow {}
 
@@ -25,6 +26,9 @@ final class ControlWindow: NSWindow {}
     private let jungleRouteControl = JungleRouteControlController()
     private var controls: NSWindow!
     private var statusItem: NSStatusItem!
+    private var updateTitleButton: NSButton!
+    private var updateTitleAccessory: NSTitlebarAccessoryViewController!
+    private var updateStateCancellable: AnyCancellable?
     private var hotkeys: [EventHotKeyRef] = []
     private var handler: EventHandlerRef?
     private var layoutTimer: Timer?
@@ -38,6 +42,7 @@ final class ControlWindow: NSWindow {}
         controls = ControlWindow(contentRect: NSRect(x: 0, y: 0, width: 786, height: 740),
                                  styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         controls.isReleasedWhenClosed = false
+        configureUpdateTitleAccessory()
         controls.contentView = NSHostingView(rootView: GuideControlView(model: model, guide: guide, recognition: recognition,
             calibration: calibration, objectiveTimers: objectiveTimers, lobbyScout: lobbyScout,
             updateChecker: updateChecker, overlayLayouts: overlayLayouts, jungleRoute: jungleRoute, postGame: postGame,
@@ -48,6 +53,11 @@ final class ControlWindow: NSWindow {}
             copyDiagnostics: { [weak self] in self?.copyDiagnostics() },
             openBugReport: { [weak self] in self?.openBugReport() }))
         controls.center()
+        updateStateCancellable = updateChecker.$state
+            .removeDuplicates()
+            .sink { [weak self] state in
+                self?.refreshUpdateTitleAccessory(for: state)
+            }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         updateLanguage()
         NotificationCenter.default.addObserver(self, selector: #selector(updateLanguage), name: LanguageSettings.didChange, object: nil)
@@ -76,6 +86,7 @@ final class ControlWindow: NSWindow {}
     }
     @objc private func updateLanguage() {
         controls.title = "Wexi LoL · v\(displayedVersion)"
+        refreshUpdateTitleAccessory(for: updateChecker.state)
         statusItem.button?.image = NSImage(systemSymbolName: "waveform.path", accessibilityDescription: L10n.text("Wexi LoL 设置"))
         let menu = NSMenu()
         for (title, action) in [("打开设置", #selector(showControls)), ("收起设置到菜单栏", #selector(minimizeControls)),
@@ -90,6 +101,35 @@ final class ControlWindow: NSWindow {}
         let quit = NSMenuItem(title: L10n.text("退出 Wexi LoL"), action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self; menu.addItem(quit); statusItem.menu = menu
         updateHints()
+    }
+    private func configureUpdateTitleAccessory() {
+        updateTitleButton = NSButton(title: "", target: self, action: #selector(openAvailableUpdate))
+        updateTitleButton.bezelStyle = .inline
+        updateTitleButton.controlSize = .small
+        updateTitleButton.font = .systemFont(ofSize: NSFont.smallSystemFontSize, weight: .semibold)
+        updateTitleButton.contentTintColor = .systemOrange
+        updateTitleButton.image = NSImage(systemSymbolName: "arrow.down.circle.fill", accessibilityDescription: nil)
+        updateTitleButton.imagePosition = .imageLeading
+        updateTitleButton.isHidden = true
+
+        updateTitleAccessory = NSTitlebarAccessoryViewController()
+        updateTitleAccessory.layoutAttribute = .right
+        updateTitleAccessory.view = updateTitleButton
+        controls.addTitlebarAccessoryViewController(updateTitleAccessory)
+    }
+    private func refreshUpdateTitleAccessory(for state: UpdateChecker.State) {
+        guard let updateTitleButton else { return }
+        guard case let .available(version) = state else {
+            updateTitleButton.isHidden = true
+            return
+        }
+        updateTitleButton.title = L10n.text("发现新版本 v%@", version)
+        updateTitleButton.toolTip = L10n.text("下载 v%@", version)
+        updateTitleButton.sizeToFit()
+        updateTitleButton.isHidden = false
+    }
+    @objc private func openAvailableUpdate() {
+        updateChecker.openRelease()
     }
     @objc func showControls() {
         if controls.isMiniaturized { controls.deminiaturize(nil) }
