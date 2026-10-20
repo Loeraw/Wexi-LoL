@@ -198,7 +198,7 @@ private struct GuideCacheEntry {
     private nonisolated static func fetch(_ url: URL, language: AppLanguage) async throws -> GuidePage {
         var request = URLRequest(url: url)
         request.timeoutInterval = 20
-        request.setValue("WexiLoL/0.6.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("WexiLoL/0.6.1", forHTTPHeaderField: "User-Agent")
         request.setValue(language.acceptLanguage, forHTTPHeaderField: "Accept-Language")
         // OP.GG stores its last locale in a cookie. A shared session can therefore
         // return Chinese content for the unprefixed English URL after visiting
@@ -217,7 +217,7 @@ private struct GuideCacheEntry {
     private nonisolated static func fetchMayhemStats() async throws -> MayhemAugmentStatsPage {
         var request = URLRequest(url: URL(string: "https://hexmayhem.com/augments")!)
         request.timeoutInterval = 20
-        request.setValue("WexiLoL/0.6.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("WexiLoL/0.6.1", forHTTPHeaderField: "User-Agent")
         let configuration = URLSessionConfiguration.ephemeral
         configuration.httpShouldSetCookies = false
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData

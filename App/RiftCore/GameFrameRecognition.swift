@@ -10,7 +10,8 @@ public enum GameFrameRecognition {
         request.recognitionLanguages = available.isEmpty ? ["en-US"] : available
     }
     public static func scoreboardLines(image: CGImage,
-                                       recognitionLanguages: [String] = ["en-US", "zh-Hans"]) throws -> [RecognizedLine] {
+                                       recognitionLanguages: [String] = ["en-US", "zh-Hans"],
+                                       scanRelicTimers: Bool = true) throws -> [RecognizedLine] {
         // The ARAM relic countdown cells sit against the very top edge while
         // Tab is held. Keep the full height; downstream recognition uses the
         // central scoreboard density to reject ordinary HUD text.
@@ -36,7 +37,7 @@ public enum GameFrameRecognition {
         // A full-frame Vision pass tends to reverse or merge the tiny timer
         // glyphs (for example 0:22 becomes 22:0). Reading Riot's four fixed
         // cells independently preserves both the digits and their slot order.
-        for centerX in [0.469, 0.499, 0.529, 0.559] {
+        for centerX in scanRelicTimers ? [0.469, 0.499, 0.529, 0.559] : [] {
             let cropRect = CGRect(x: Double(image.width) * (centerX - 0.018),
                                   y: 0,
                                   width: Double(image.width) * 0.036,
@@ -107,7 +108,7 @@ public enum GameFrameRecognition {
         let rect = CGRect(x: 0.12 * Double(image.width), y: 0.28 * Double(image.height),
                           width: 0.76 * Double(image.width), height: 0.24 * Double(image.height)).integral
         guard let crop = image.cropping(to: rect) else { return [] }
-        return try lines(image: crop, catalog: catalog, recognitionLanguages: recognitionLanguages).map { line in
+        return try lines(image: crop, catalog: catalog, recognitionLanguages: recognitionLanguages, fast: true).map { line in
             RecognizedLine(text: line.text,
                            x: (rect.minX + line.x * rect.width) / Double(image.width),
                            y: (Double(image.height) - rect.maxY + line.y * rect.height) / Double(image.height),
@@ -142,9 +143,10 @@ public enum GameFrameRecognition {
                                                     recognitionLanguages: recognitionLanguages), catalog: catalog)
     }
     public static func lines(image: CGImage, catalog: [AugmentRating],
-                             recognitionLanguages: [String] = ["zh-Hans", "en-US"]) throws -> [RecognizedLine] {
+                             recognitionLanguages: [String] = ["zh-Hans", "en-US"],
+                             fast: Bool = false) throws -> [RecognizedLine] {
         let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .accurate
+        request.recognitionLevel = fast ? .fast : .accurate
         applyLanguages(recognitionLanguages, to: request)
         request.usesLanguageCorrection = false
         request.customWords = catalog.flatMap { [$0.name, $0.englishName ?? ""] + $0.alternateNames }.filter { !$0.isEmpty }

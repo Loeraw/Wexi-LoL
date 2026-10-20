@@ -9,14 +9,14 @@
   <a href="https://loeraw.github.io/Wexi-LoL/"><img src="https://img.shields.io/badge/Website-Wexi%20LoL-6D28D9" alt="Wexi LoL website"></a>
   <a href="https://www.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-13%2B-000000?logo=apple" alt="macOS 13+"></a>
   <a href="https://www.swift.org/"><img src="https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&amp;logoColor=white" alt="Swift 5.9"></a>
-  <a href="https://github.com/Loeraw/Wexi-LoL/releases/tag/v0.6.0"><img src="https://img.shields.io/badge/release-v0.6.0-D26A3A" alt="Release v0.6.0"></a>
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/tag/v0.6.1"><img src="https://img.shields.io/badge/release-v0.6.1-D26A3A" alt="Release v0.6.1"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
 </p>
 
 ## 下载 / Download
 
 <p align="center">
-  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.6.0/Wexi.LoL-0.6.0.dmg">
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.6.1/Wexi.LoL-0.6.1.dmg">
     <img src="https://img.shields.io/badge/DOWNLOAD-LATEST-D2A53A?style=for-the-badge&amp;labelColor=555555" alt="Download latest Wexi LoL DMG">
   </a>
 </p>

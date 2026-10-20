@@ -33,16 +33,17 @@ actor CardScanner {
     private var cachedPID: pid_t?
     private var windowUpdatedAt = Date.distantPast
     private var fallbackAt = Date.distantPast
+    private var skillProbeAt = Date.distantPast
     private var relicProbeAt = Date.distantPast
     private var minimapProbeAt = Date.distantPast
     private var cachedMinimapFrame: CGRect?
 
     @available(macOS 14.0, *)
     func scan(pid: pid_t, catalog: [AugmentRating], recognitionLanguages: [String],
-              scanSkills: Bool, scanRelics: Bool) async throws -> ScannedHints {
+              scanSkills: Bool, scanScoreboard: Bool, scanRelicTimers: Bool) async throws -> ScannedHints {
         let started = Date()
         let window: SCWindow
-        if let cachedWindow, cachedPID == pid, Date().timeIntervalSince(windowUpdatedAt) < 1 {
+        if let cachedWindow, cachedPID == pid, Date().timeIntervalSince(windowUpdatedAt) < 5 {
             window = cachedWindow
         } else {
             let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true)
@@ -61,7 +62,9 @@ actor CardScanner {
         }
         let filter = SCContentFilter(desktopIndependentWindow: window)
         let config = SCStreamConfiguration()
-        let scale = min(2.0, 2560.0 / window.frame.width)
+        // Vision does not need a Retina-sized 4K frame. Keeping the longest
+        // edge near 2048 pixels substantially lowers capture and OCR cost.
+        let scale = min(2.0, 2048.0 / window.frame.width)
         config.width = Int(window.frame.width * scale)
         config.height = Int(window.frame.height * scale)
         config.showsCursor = false
@@ -74,7 +77,9 @@ actor CardScanner {
                                                                  recognitionLanguages: recognitionLanguages)
         var cards = AugmentRecognition.visibleCards(lines: lines, catalog: catalog)
         var usedFallback = false
-        if !catalog.isEmpty && cards.count < 3 && Date().timeIntervalSince(fallbackAt) >= 1 {
+        let fastChoiceEvidence = AugmentRecognition.hasChoiceEvidence(lines: lines, catalog: catalog)
+        let fallbackInterval = fastChoiceEvidence ? 0.75 : 5.0
+        if !catalog.isEmpty && cards.count < 3 && Date().timeIntervalSince(fallbackAt) >= fallbackInterval {
             fallbackAt = Date(); usedFallback = true
             lines += try GameFrameRecognition.lines(image: image, catalog: catalog, recognitionLanguages: recognitionLanguages)
                 + GameFrameRecognition.cardTitleLines(image: image, catalog: catalog, recognitionLanguages: recognitionLanguages)
@@ -85,7 +90,9 @@ actor CardScanner {
         let saved = UserDefaults.standard.data(forKey: "skillPlusAnchors.v1").flatMap { try? JSONDecoder().decode([String: HintAnchor].self, from: $0) }
         let calibrated = savedAspect > 0 && abs(aspect / savedAspect - 1) < 0.03 &&
             ["Q", "W", "E", "R"].allSatisfy { key in saved?[key].map { (0...1).contains($0.x) && (0...1).contains($0.y) } == true }
-        let hud = scanSkills && !calibrated ? try GameFrameRecognition.skillLines(image: image) : []
+        let shouldProbeSkills = scanSkills && !calibrated && Date().timeIntervalSince(skillProbeAt) >= 1.5
+        if shouldProbeSkills { skillProbeAt = Date() }
+        let hud = shouldProbeSkills ? try GameFrameRecognition.skillLines(image: image) : []
         let anchors = SkillHUDRecognition.anchors(lines: hud, imageAspect: aspect)
         let exact = AugmentRecognition.isExactTriple(cards, lines: lines, catalog: catalog)
         let choiceVisible = !cards.isEmpty || AugmentRecognition.hasChoiceEvidence(lines: lines, catalog: catalog)
@@ -93,13 +100,13 @@ actor CardScanner {
         // Metal game owns the keyboard. Probe the scoreboard itself at a low
         // cadence instead, and pause this extra OCR whenever augment cards are
         // visible so augment recognition keeps priority.
-        let shouldProbeRelics = scanRelics && cards.isEmpty && Date().timeIntervalSince(relicProbeAt) >= 0.35
-        if shouldProbeRelics { relicProbeAt = Date() }
-        let scoreboardLines = shouldProbeRelics ? try GameFrameRecognition.scoreboardLines(
-            image: image, recognitionLanguages: recognitionLanguages
+        let shouldProbeScoreboard = scanScoreboard && cards.isEmpty && Date().timeIntervalSince(relicProbeAt) >= 0.9
+        if shouldProbeScoreboard { relicProbeAt = Date() }
+        let scoreboardLines = shouldProbeScoreboard ? try GameFrameRecognition.scoreboardLines(
+            image: image, recognitionLanguages: recognitionLanguages, scanRelicTimers: scanRelicTimers
         ) : []
-        let relicScan = shouldProbeRelics ? HealthRelicRecognition.scan(lines: scoreboardLines) : nil
-        if Date().timeIntervalSince(minimapProbeAt) >= 1 {
+        let relicScan = shouldProbeScoreboard ? HealthRelicRecognition.scan(lines: scoreboardLines) : nil
+        if Date().timeIntervalSince(minimapProbeAt) >= 2 {
             minimapProbeAt = Date()
             cachedMinimapFrame = MinimapFrameRecognition.normalizedFrame(image: image)
         }
@@ -151,10 +158,12 @@ actor CardScanner {
     private var revision = 0
     private var wasGameForeground = false
     private var scoreboardUpdatedAt = Date.distantPast
+    private var scoreboardSignature = ""
+    private var summaryUpdatedAt = Date.distantPast
 
     var isAramMode: Bool { mode == "ARAM" || mode == "KIWI" }
     var isScoreboardVisible: Bool {
-        scoreboardVisible && Date().timeIntervalSince(scoreboardUpdatedAt) < 0.9
+        scoreboardVisible && Date().timeIntervalSince(scoreboardUpdatedAt) < 1.5
     }
 
     var recommendedSkill: String? {
@@ -183,12 +192,13 @@ actor CardScanner {
                     guard !Task.isCancelled else { return }
                     if self.detectedChampion != result.key { self.resetCards() }
                     self.mode = result.mode
-                    self.detectedChampion = result.key
-                    self.detectedLevel = result.level
-                    self.skillRanks = result.ranks
-                    self.ownedItemIDs = result.itemIDs
+                    if self.detectedChampion != result.key { self.detectedChampion = result.key }
+                    if self.detectedLevel != result.level { self.detectedLevel = result.level }
+                    if self.skillRanks != result.ranks { self.skillRanks = result.ranks }
+                    if self.ownedItemIDs != result.itemIDs { self.ownedItemIDs = result.itemIDs }
                     self.playerUpdatedAt = Date()
-                    self.championStatus = "已识别 \(result.key) · 等级 \(result.level) · \(result.mode)"
+                    let nextStatus = "已识别 \(result.key) · 等级 \(result.level) · \(result.mode)"
+                    if self.championStatus != nextStatus { self.championStatus = nextStatus }
                     let championChanged = guide.championKey != result.key
                     let detectedGuideMode = GuideMode.from(liveMode: result.mode)
                     let modeChanged = detectedGuideMode.map { guide.mode != $0 } ?? false
@@ -217,15 +227,24 @@ actor CardScanner {
             while !Task.isCancelled {
                 guard let self else { return }
                 await self.scanIfReady()
-                do { try await Task.sleep(nanoseconds: GameWindow.frontmostPID == nil ? 500_000_000 : 100_000_000) } catch { return }
+                let gameIsForeground = GameWindow.frontmostPID != nil
+                let augmentMode = self.mode == "KIWI" || self.mode == "ARAM" || self.mode == "CHERRY"
+                let delay: UInt64 = !gameIsForeground ? 750_000_000 : (augmentMode ? 350_000_000 : 650_000_000)
+                do { try await Task.sleep(nanoseconds: delay) } catch { return }
             }
         }
     }
     func resetCards() {
         revision += 1; stable = StableCards(); guide?.recognized = []
-        cardHints = []; skillAnchors = [:]; frameUpdatedAt = .distantPast
-        scoreboardVisible = false; scoreboardLines = []; scoreboardUpdatedAt = .distantPast
-        scoreboardRevision += 1
+        if !cardHints.isEmpty { cardHints = [] }
+        if !skillAnchors.isEmpty { skillAnchors = [:] }
+        frameUpdatedAt = .distantPast
+        if scoreboardVisible { scoreboardVisible = false }
+        if !scoreboardLines.isEmpty {
+            scoreboardLines = []
+            scoreboardRevision += 1
+        }
+        scoreboardUpdatedAt = .distantPast; scoreboardSignature = ""
     }
     func pauseForApplicationChange() {
         let foreground = GameWindow.frontmostPID != nil
@@ -249,38 +268,52 @@ actor CardScanner {
         // Practice Tool can use the same skill guidance to test placement.
         let scanCards = (mode == "KIWI" || mode == "ARAM" || mode == "CHERRY") &&
             detectedChampion == guide.championKey && !guide.loading && !guide.augments.isEmpty
-        let catalog = scanCards ? guide.augments : []
+        // Tab owns the screen while the scoreboard is visible. Skipping card
+        // OCR here prevents two expensive Vision pipelines from competing.
+        let tabIsHeld = CGEventSource.keyState(.combinedSessionState, key: 48)
+        let catalog = scanCards && !tabIsHeld ? guide.augments : []
         let isAram = mode == "KIWI" || mode == "ARAM"
         let key = guide.championKey, version = revision, catalogDate = guide.fetchedAt
         do {
-            cardStatus = "正在读取游戏画面…"
             let result = try await scanner.scan(pid: pid, catalog: catalog,
                                                 recognitionLanguages: LanguageSettings.shared.gameLanguage.visionLanguages,
                                                 scanSkills: recommendedSkill != nil,
-                                                scanRelics: true)
+                                                scanScoreboard: true,
+                                                scanRelicTimers: isAram)
             guard !Task.isCancelled, revision == version, GameWindow.frontmostPID == pid else { return }
             let validCards = scanCards && !guide.loading && guide.fetchedAt == catalogDate && guide.championKey == key
             let confirmed = stable.observe(validCards ? result.cards : [],
                                             choiceVisible: validCards && result.choiceVisible,
                                             exactTriple: validCards && result.exactTriple)
-            guide.recognized = confirmed.map(\.id)
-            cardHints = confirmed
-            skillAnchors = result.skillAnchors
-            minimapFrame = result.minimapFrame
+            let confirmedIDs = confirmed.map(\.id)
+            if guide.recognized != confirmedIDs { guide.recognized = confirmedIDs }
+            if cardHints != confirmed { cardHints = confirmed }
+            if skillAnchors != result.skillAnchors { skillAnchors = result.skillAnchors }
+            if minimapFrame != result.minimapFrame { minimapFrame = result.minimapFrame }
             capturedFrame = result.windowFrame; capturedLayer = result.windowLayer; capturedPID = pid
             frameUpdatedAt = Date()
             if let relicScan = result.relicScan {
-                scoreboardVisible = relicScan.scoreboardVisible
+                if scoreboardVisible != relicScan.scoreboardVisible { scoreboardVisible = relicScan.scoreboardVisible }
                 // Keep the OCR lines even when the Tab scoreboard is closed.
                 // The loading-screen overlay uses current player names to
                 // align each profile with its champion card.
-                scoreboardLines = result.scoreboardLines
                 scoreboardUpdatedAt = Date()
-                scoreboardRevision += 1
+                let nextSignature = result.scoreboardLines.map {
+                    "\($0.text)|\(Int($0.x * 200))|\(Int($0.y * 200))"
+                }.joined(separator: "\n")
+                if nextSignature != scoreboardSignature {
+                    scoreboardSignature = nextSignature
+                    scoreboardLines = result.scoreboardLines
+                    scoreboardRevision += 1
+                }
                 if isAram { objectiveTimers?.observeHealthRelicScan(relicScan) }
             }
-            scanSummary = "\(Date().formatted(date: .omitted, time: .standard)) · " + result.summary
-            cardStatus = !validCards ? "技能栏识别中；海克斯评级等待模式和攻略数据" : (confirmed.isEmpty ? "尚未确认海克斯卡片" : "已识别 \(confirmed.count) 张卡片，显示对应评级")
+            if Date().timeIntervalSince(summaryUpdatedAt) >= 1 {
+                summaryUpdatedAt = Date()
+                scanSummary = "\(Date().formatted(date: .omitted, time: .standard)) · " + result.summary
+            }
+            let nextCardStatus = !validCards ? "技能栏识别中；海克斯评级等待模式和攻略数据" : (confirmed.isEmpty ? "尚未确认海克斯卡片" : "已识别 \(confirmed.count) 张卡片，显示对应评级")
+            if cardStatus != nextCardStatus { cardStatus = nextCardStatus }
         } catch {
             guard !Task.isCancelled, revision == version else { return }
             resetCards()
