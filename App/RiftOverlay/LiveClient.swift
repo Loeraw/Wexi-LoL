@@ -78,7 +78,7 @@ final class LiveClient {
         return (key, stats.gameMode, active.level, active.skillRanks,
                 ChampionRecognition.ownedItemIDs(active: active, roster: players))
     }
-    func objectiveState() async throws -> (game: GameStats, events: [LiveGameEvent], playerTeams: [String: String], activeTeam: String?) {
+    func objectiveState() async throws -> (game: GameStats, events: [LiveGameEvent], playerTeams: [String: String], activeTeam: String?, activeLevel: Int) {
         async let game: GameStats = get(URL(string: "https://127.0.0.1:2999/liveclientdata/gamestats")!)
         async let eventData: LiveEventData = get(URL(string: "https://127.0.0.1:2999/liveclientdata/eventdata")!)
         async let roster: [LiveRosterPlayer] = get(URL(string: "https://127.0.0.1:2999/liveclientdata/playerlist")!)
@@ -91,7 +91,7 @@ final class LiveClient {
                 teams[ObjectiveTimerEngine.normalize(name)] = team
             }
         }
-        return (stats, data.events, teams, ChampionRecognition.team(active: activePlayer, roster: players))
+        return (stats, data.events, teams, ChampionRecognition.team(active: activePlayer, roster: players), activePlayer.level)
     }
     func lobbyState() async throws -> (game: GameStats, players: [LiveRosterPlayer]) {
         async let game: GameStats = get(URL(string: "https://127.0.0.1:2999/liveclientdata/gamestats")!)

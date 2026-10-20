@@ -7,6 +7,7 @@ import RiftCore
     }
     @Published private(set) var mode = ""
     @Published private(set) var activeTeam = ""
+    @Published private(set) var activeLevel = 0
     @Published private(set) var rows: [ObjectiveCountdown] = []
     @Published private var statusKey = "等待对局数据…"
     @Published private var statusCount: Int?
@@ -38,6 +39,7 @@ import RiftCore
         if mode == "CLASSIC" { return L10n.text("召唤师峡谷") }
         return L10n.text("等待对局")
     }
+    var currentGameTime: Double? { estimatedGameTime }
 
     func start() {
         task?.cancel()
@@ -128,6 +130,7 @@ import RiftCore
             }
             mode = incomingMode
             if let team = state.activeTeam, !team.isEmpty { activeTeam = team.uppercased() }
+            activeLevel = state.activeLevel
             sampledGameTime = state.game.gameTime
             sampledAt = Date()
             events = state.events
@@ -154,6 +157,7 @@ import RiftCore
     private func reset() {
         mode = ""
         activeTeam = ""
+        activeLevel = 0
         sampledGameTime = nil
         sampledAt = .distantPast
         events = []

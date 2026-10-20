@@ -22,6 +22,7 @@ final class ControlWindow: NSWindow {}
     private let lobbyScoutOverlay = LobbyScoutOverlayController()
     private let layoutEditor = OverlayLayoutEditorController()
     private let jungleRouteOverlay = JungleRouteOverlayController()
+    private let jungleRouteControl = JungleRouteControlController()
     private var controls: NSWindow!
     private var statusItem: NSStatusItem!
     private var hotkeys: [EventHotKeyRef] = []
@@ -164,7 +165,7 @@ final class ControlWindow: NSWindow {}
         let editorTarget = game?.frame ?? controls.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? .zero
         layoutEditor.update(store: overlayLayouts, target: editorTarget)
         if overlayLayouts.isEditing {
-            hints.hideAll(); objectiveTimerOverlay.hide(); itemBuildOverlay.hide(); lobbyScoutOverlay.hide(); jungleRouteOverlay.hide()
+            hints.hideAll(); objectiveTimerOverlay.hide(); itemBuildOverlay.hide(); lobbyScoutOverlay.hide(); jungleRouteOverlay.hide(); jungleRouteControl.hide()
             return
         }
         hints.update(model: model, guide: guide, recognition: recognition, calibration: calibration, layouts: overlayLayouts)
@@ -175,12 +176,16 @@ final class ControlWindow: NSWindow {}
                                 layouts: overlayLayouts, game: game)
         lobbyScoutOverlay.update(model: model, store: lobbyScout, guide: guide, recognition: recognition,
                                  layouts: overlayLayouts, game: game)
+        jungleRoute.updateSession(gameMode: objectiveTimers.mode, gameTime: objectiveTimers.currentGameTime,
+                                  activeLevel: objectiveTimers.activeLevel)
         jungleRouteOverlay.update(store: jungleRoute, model: model, layouts: overlayLayouts,
                                   // The player scout intentionally clears its loading-screen
                                   // state after entering a match. ObjectiveTimerStore keeps
                                   // polling Riot's live game mode, so it is the reliable source
                                   // for an in-game jungle overlay.
                                   gameMode: objectiveTimers.mode, activeTeam: objectiveTimers.activeTeam,
+                                  minimapFrame: recognition.minimapFrame, game: game)
+        jungleRouteControl.update(store: jungleRoute, gameMode: objectiveTimers.mode,
                                   minimapFrame: recognition.minimapFrame, game: game)
         // One small local status file, overwritten every two seconds. No screenshots,
         // OCR text, account names or player identifiers are recorded.
@@ -205,6 +210,8 @@ final class ControlWindow: NSWindow {}
                 "jungleRouteEnabled": jungleRoute.enabled,
                 "jungleRouteMode": objectiveTimers.mode,
                 "jungleRouteTeam": objectiveTimers.activeTeam,
+                "jungleRouteLevel": objectiveTimers.activeLevel,
+                "jungleRouteCompleted": jungleRoute.sessionCompleted,
                 "minimapFrame": recognition.minimapFrame.map {
                     ["x": $0.minX, "y": $0.minY, "width": $0.width, "height": $0.height]
                 } ?? NSNull(),
@@ -248,7 +255,7 @@ final class ControlWindow: NSWindow {}
         showControls(); return true
     }
     func applicationWillTerminate(_ notification: Notification) {
-        recognition.stop(); objectiveTimers.stop(); lobbyScout.stop(); postGame.stop(); hints.hideAll(); objectiveTimerOverlay.hide(); itemBuildOverlay.hide(); lobbyScoutOverlay.hide(); jungleRouteOverlay.hide(); layoutEditor.hide()
+        recognition.stop(); objectiveTimers.stop(); lobbyScout.stop(); postGame.stop(); hints.hideAll(); objectiveTimerOverlay.hide(); itemBuildOverlay.hide(); lobbyScoutOverlay.hide(); jungleRouteOverlay.hide(); jungleRouteControl.hide(); layoutEditor.hide()
         layoutTimer?.invalidate()
         hotkeys.forEach { UnregisterEventHotKey($0) }
         if let handler { RemoveEventHandler(handler) }
