@@ -88,12 +88,22 @@ public enum ObjectiveTimerEngine {
     public static func aram(gameTime: Double, relicDeadlines: [Int: Double]) -> [ObjectiveCountdown] {
         guard gameTime.isFinite, gameTime >= 0 else { return [] }
         var output: [ObjectiveCountdown] = []
-        if gameTime < 105 {
-            output.append(ObjectiveCountdown(kind: .healthRelic, remaining: Int(ceil(105 - gameTime))))
-        }
+        // Slots run from the blue base toward the red base. Inner relics
+        // (1 and 4) first spawn at 2:30; outer relics (2 and 3) at 1:45.
+        let initialSpawnBySlot: [Int: Double] = [1: 150, 2: 105, 3: 105, 4: 150]
         for slot in 1...4 {
-            guard let deadline = relicDeadlines[slot], deadline > gameTime else { continue }
-            output.append(ObjectiveCountdown(kind: .healthRelic, remaining: Int(ceil(deadline - gameTime)), slot: slot))
+            let target: Double?
+            if let deadline = relicDeadlines[slot], deadline > gameTime {
+                target = deadline
+            } else if let initialSpawn = initialSpawnBySlot[slot], initialSpawn > gameTime {
+                target = initialSpawn
+            } else {
+                target = nil
+            }
+            guard let target else { continue }
+            output.append(ObjectiveCountdown(kind: .healthRelic,
+                                             remaining: Int(ceil(target - gameTime)),
+                                             slot: slot))
         }
         return output.sorted {
             if $0.remaining != $1.remaining { return $0.remaining < $1.remaining }

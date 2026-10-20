@@ -32,7 +32,13 @@ final class ObjectiveTimerTests: XCTestCase {
 
     func testAramRelicsIncludeInitialAndManualTimers() {
         XCTAssertEqual(ObjectiveTimerEngine.aram(gameTime: 45, relicDeadlines: [:]),
-                       [ObjectiveCountdown(kind: .healthRelic, remaining: 60)])
+                       [ObjectiveCountdown(kind: .healthRelic, remaining: 60, slot: 2),
+                        ObjectiveCountdown(kind: .healthRelic, remaining: 60, slot: 3),
+                        ObjectiveCountdown(kind: .healthRelic, remaining: 105, slot: 1),
+                        ObjectiveCountdown(kind: .healthRelic, remaining: 105, slot: 4)])
+        XCTAssertEqual(ObjectiveTimerEngine.aram(gameTime: 120, relicDeadlines: [:]),
+                       [ObjectiveCountdown(kind: .healthRelic, remaining: 30, slot: 1),
+                        ObjectiveCountdown(kind: .healthRelic, remaining: 30, slot: 4)])
         XCTAssertEqual(ObjectiveTimerEngine.aram(gameTime: 200, relicDeadlines: [3: 290]),
                        [ObjectiveCountdown(kind: .healthRelic, remaining: 90, slot: 3)])
     }

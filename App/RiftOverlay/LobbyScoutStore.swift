@@ -87,7 +87,7 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     private func fetchAIProfile(riotID: String, region: OPGGRegion) async throws -> SummonerProfile {
         guard let url = SummonerProfileURL.aiJSON(riotID: riotID, region: region) else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
-        request.setValue("WexiLoL/0.5.6", forHTTPHeaderField: "User-Agent")
+        request.setValue("WexiLoL/0.5.7", forHTTPHeaderField: "User-Agent")
         request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         let (data, response) = try await session.data(for: request)
@@ -101,7 +101,7 @@ private final class OPGGSummonerClient: @unchecked Sendable {
     private func fetchHTMLProfile(riotID: String, region: OPGGRegion) async throws -> SummonerProfile {
         guard let url = SummonerProfileURL.make(riotID: riotID, region: region) else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
-        request.setValue("WexiLoL/0.5.6", forHTTPHeaderField: "User-Agent")
+        request.setValue("WexiLoL/0.5.7", forHTTPHeaderField: "User-Agent")
         request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
         request.setValue("text/html,application/xhtml+xml", forHTTPHeaderField: "Accept")
         let (data, response) = try await session.data(for: request)
