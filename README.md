@@ -50,7 +50,7 @@ The current build uses a local ad-hoc signature and has not been notarized by Ap
 | 更新与诊断 | 启动时检查 GitHub Release 新版本；设置页可复制不含截图、OCR 文字或玩家名称的诊断信息 | Checks GitHub Releases for updates at launch; Settings can copy diagnostics that exclude screenshots, OCR text, and player names |
 | 布局编辑器 | 预览并分别拖动、缩放五类 Overlay，独立调整透明度，按游戏窗口分辨率保存或恢复默认布局 | Preview, move, resize, and adjust opacity for five overlay groups, with layouts saved per game-window resolution |
 | 排位赛前分析 | Loading 界面汇总双方平均胜率、近期胜场和常用英雄匹配，并显示技能优先级与两条出装分支 | Ranked loading screen summarizes team win rates, recent form, comfort picks, skill priority, and two build paths |
-| 个人赛后复盘 | 仅在本机记录自己的 KDA、补刀、视野与时长，显示最近十局趋势并给出数据驱动的改进建议 | Locally records only your KDA, CS, vision, and duration, then shows a ten-game trend and metric-based advice |
+| 个人赛后复盘 | 仅在本机记录自己的 KDA、补刀、视野与时长，显示最近十局趋势；可选择使用自己的兼容 OpenAI API 生成 AI 建议，密钥存入 macOS Keychain | Locally records only your KDA, CS, vision, and duration, shows a ten-game trend, and can optionally generate advice with your own OpenAI-compatible API; the key is stored in macOS Keychain |
 | 打野路线 | 可选择蓝/红起手和全清、三级抓人或反向入侵，在召唤师峡谷小地图显示可视路线 | Choose Blue/Red start and full-clear, level-three gank, or reverse-invade routes shown visually on the Rift minimap |
 | 多语言界面与识别 | Wexi 界面可选择 12 种语言；游戏客户端语言可独立选择 15 种，并加载对应 OP.GG 海克斯名称与 Vision OCR | Choose from 12 Wexi interface languages and independently select one of 15 game-client languages for localized OP.GG augment names and Vision OCR |
 

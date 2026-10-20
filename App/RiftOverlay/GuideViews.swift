@@ -114,6 +114,7 @@ struct GuideControlView: View {
     @ObservedObject var overlayLayouts: OverlayLayoutStore
     @ObservedObject var jungleRoute: JungleRouteStore
     @ObservedObject var postGame: PostGameStore
+    @ObservedObject var aiReview: AIReviewStore
     let displayedVersion: String
     let startCalibration: () -> Void
     let startLayoutEditing: () -> Void
@@ -465,6 +466,40 @@ struct GuideControlView: View {
                              String(format: "%.1f CS/min · %.2f vision/min", record.csPerMinute, record.visionPerMinute))
                             .font(.system(size: 11, design: .monospaced))
                         Text(postGame.advice(for: record)).font(.system(size: 11)).foregroundStyle(.secondary)
+                    }
+                    Divider()
+                    Toggle(L10n.text("启用 AI 复盘"), isOn: $aiReview.enabled)
+                    if aiReview.enabled {
+                        TextField(L10n.text("AI 接口地址"), text: $aiReview.apiURL)
+                            .textFieldStyle(.roundedBorder)
+                        TextField(L10n.text("模型名称"), text: $aiReview.model)
+                            .textFieldStyle(.roundedBorder)
+                        SecureField(L10n.text("API Key"), text: $aiReview.apiKeyDraft)
+                            .textFieldStyle(.roundedBorder)
+                        HStack {
+                            Button(L10n.text("保存 API Key")) { aiReview.saveKey() }
+                            if let record = postGame.records.first {
+                                Button(aiReview.isGenerating ? L10n.text("正在生成…") : L10n.text("生成 AI 复盘")) {
+                                    Task { await aiReview.generate(for: record, recent: postGame.records) }
+                                }
+                                .disabled(aiReview.isGenerating || !aiReview.hasSavedKey)
+                            }
+                            if aiReview.hasSavedKey {
+                                Label(L10n.text("密钥已保存在 Keychain"), systemImage: "checkmark.shield.fill")
+                                    .font(.caption).foregroundStyle(guideMint)
+                            }
+                        }
+                        if !aiReview.status.isEmpty {
+                            Text(aiReview.status).font(.caption).foregroundStyle(.secondary)
+                        }
+                        if !aiReview.advice.isEmpty {
+                            Text(aiReview.advice)
+                                .font(.system(size: 11)).textSelection(.enabled)
+                                .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+                                .background(.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 8))
+                        }
+                        Text(L10n.text("请求只包含自己的英雄、KDA、补刀、视野、时长和最近十局汇总；不会发送截图或玩家名称，API Key 仅用于请求认证。"))
+                            .font(.system(size: 10)).foregroundStyle(.secondary)
                     }
                     Text(L10n.text("只记录自己的本机对局摘要，不分析被隐藏的玩家；记录保存在本机。"))
                         .font(.system(size: 11)).foregroundStyle(.secondary)

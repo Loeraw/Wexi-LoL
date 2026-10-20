@@ -15,6 +15,7 @@ final class ControlWindow: NSWindow {}
     let overlayLayouts = OverlayLayoutStore()
     let jungleRoute = JungleRouteStore()
     let postGame = PostGameStore()
+    let aiReview = AIReviewStore()
     private let hints = HintOverlayController()
     private let objectiveTimerOverlay = ObjectiveTimerOverlayController()
     private let itemBuildOverlay = ItemBuildOverlayController()
@@ -39,6 +40,7 @@ final class ControlWindow: NSWindow {}
         controls.contentView = NSHostingView(rootView: GuideControlView(model: model, guide: guide, recognition: recognition,
             calibration: calibration, objectiveTimers: objectiveTimers, lobbyScout: lobbyScout,
             updateChecker: updateChecker, overlayLayouts: overlayLayouts, jungleRoute: jungleRoute, postGame: postGame,
+            aiReview: aiReview,
             displayedVersion: displayedVersion,
             startCalibration: { [weak self] in self?.startCalibration() },
             startLayoutEditing: { [weak self] in self?.startLayoutEditing() },
@@ -174,7 +176,11 @@ final class ControlWindow: NSWindow {}
         lobbyScoutOverlay.update(model: model, store: lobbyScout, guide: guide, recognition: recognition,
                                  layouts: overlayLayouts, game: game)
         jungleRouteOverlay.update(store: jungleRoute, model: model, layouts: overlayLayouts,
-                                  gameMode: lobbyScout.gameMode, game: game)
+                                  // The player scout intentionally clears its loading-screen
+                                  // state after entering a match. ObjectiveTimerStore keeps
+                                  // polling Riot's live game mode, so it is the reliable source
+                                  // for an in-game jungle overlay.
+                                  gameMode: objectiveTimers.mode, game: game)
         // One small local status file, overwritten every two seconds. No screenshots,
         // OCR text, account names or player identifiers are recorded.
         if Date().timeIntervalSince(lastDiagnosticWrite) >= 2 {
@@ -195,6 +201,8 @@ final class ControlWindow: NSWindow {}
                 "scoutLoaded": lobbyScout.loadedProfileCount, "scoutFailed": lobbyScout.failedProfileCount,
                 "playerRegion": lobbyScout.activeRegion?.rawValue ?? "auto",
                 "scoreboardVisible": recognition.isScoreboardVisible,
+                "jungleRouteEnabled": jungleRoute.enabled,
+                "jungleRouteMode": objectiveTimers.mode,
                 "recommendation": recognition.recommendedSkill ?? "none",
                 "anchors": recognition.skillAnchors.mapValues { ["x": $0.x, "y": $0.y] },
                 "cards": recognition.cardHints.map(\.id)
