@@ -9,7 +9,7 @@
   <a href="https://loeraw.github.io/Wexi-LoL/"><img src="https://img.shields.io/badge/Website-Wexi%20LoL-6D28D9" alt="Wexi LoL website"></a>
   <a href="https://www.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-13%2B-000000?logo=apple" alt="macOS 13+"></a>
   <a href="https://www.swift.org/"><img src="https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&amp;logoColor=white" alt="Swift 5.9"></a>
-  <a href="https://github.com/Loeraw/Wexi-LoL/releases/tag/v0.5.7"><img src="https://img.shields.io/badge/release-v0.5.7-D26A3A" alt="Release v0.5.7"></a>
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/tag/v0.6.0"><img src="https://img.shields.io/badge/release-v0.6.0-D26A3A" alt="Release v0.6.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
 </p>
 
@@ -24,10 +24,22 @@ Wexi LoL is a native macOS companion overlay for League of Legends. It provides 
 </p>
 <p align="center"><em>四模式攻略、推荐出装与胜率 / Four-mode guides, recommended builds, and win rates</em></p>
 
+### 游戏内实拍 / Live in-game overlays
+
+<p align="center">
+  <img src="docs/images/wexi-rift-overlay-0.6.0.png" alt="Wexi LoL Rift build, objective timer, and adaptive jungle route overlays" width="900">
+</p>
+<p align="center"><em>峡谷出装、目标计时与自适应打野路线 / Rift builds, objective timers, and adaptive jungle routes</em></p>
+
+<p align="center">
+  <img src="docs/images/wexi-augment-overlay-0.6.0.png" alt="Wexi LoL augment ratings with pick rate and win rate" width="900">
+</p>
+<p align="center"><em>海克斯评级、选用率与胜率 / Augment ratings, pick rate, and win rate</em></p>
+
 ## 下载 / Download
 
 <p align="center">
-  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.5.7/Wexi.LoL-0.5.7.dmg">
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.6.0/Wexi.LoL-0.6.0.dmg">
     <img src="https://img.shields.io/badge/DOWNLOAD-LATEST-D2A53A?style=for-the-badge&amp;labelColor=555555" alt="Download latest Wexi LoL DMG">
   </a>
 </p>
@@ -46,12 +58,12 @@ The current build uses a local ad-hoc signature and has not been notarized by Ap
 | 出装推荐 | 显示 OP.GG 主流三件套、胜率、选用率和下一件装备；游戏内面板可随时收起和恢复 | Shows popular OP.GG three-item builds, win rate, pick rate, and the next item; the in-game panel can be collapsed and restored |
 | 模式面板 | 主界面按排位、大乱斗混乱、极地大乱斗和斗魂竞技场分别展示攻略；斗魂海克斯根据胜率与样本生成评级 | Separate guide panels for Ranked, ARAM: Mayhem, ARAM, and Arena; Arena augment tiers are calculated from win rate and sample size |
 | 玩家资料 | 自动识别当前区服，在 Loading 时读取本局 10 名玩家的段位、胜率和最近 5 场 W/L；排位 Tab 面板还显示前三常用英雄及使用率 | Auto-detects the current region and loads rank, win rate, and recent W/L for all 10 players; Ranked Tab panels also show each player's top three champions and usage rates |
-| 分辨率适配 | Loading 与 Tab 玩家卡片优先跟随 OCR 识别到的实际位置；超宽屏使用居中 16:9 区域，提示和面板会随游戏窗口缩放，并可在设置中统一调整大小 | Loading and Tab player cards follow OCR-detected positions; ultrawide layouts use a centered 16:9 region, and hints and panels scale with the game window with an adjustable global size |
+| 分辨率适配 | Loading 与 Tab 玩家卡片优先跟随 OCR 识别到的实际位置；小地图 Overlay 自动检测实际边框和尺寸；超宽屏使用居中 16:9 区域，并可按分辨率保存布局 | Loading and Tab player cards follow OCR-detected positions; minimap overlays detect its actual bounds and size; ultrawide layouts use a centered 16:9 region with layouts saved per resolution |
 | 更新与诊断 | 启动时检查 GitHub Release 新版本；设置页可复制不含截图、OCR 文字或玩家名称的诊断信息 | Checks GitHub Releases for updates at launch; Settings can copy diagnostics that exclude screenshots, OCR text, and player names |
 | 布局编辑器 | 预览并分别拖动、缩放五类 Overlay，独立调整透明度，按游戏窗口分辨率保存或恢复默认布局 | Preview, move, resize, and adjust opacity for five overlay groups, with layouts saved per game-window resolution |
 | 排位赛前分析 | Loading 界面汇总双方平均胜率、近期胜场和常用英雄匹配，并显示技能优先级与两条出装分支 | Ranked loading screen summarizes team win rates, recent form, comfort picks, skill priority, and two build paths |
 | 个人赛后复盘 | 仅在本机记录自己的 KDA、补刀、视野与时长，显示最近十局趋势；可选择使用自己的兼容 OpenAI API 生成 AI 建议，密钥存入 macOS Keychain | Locally records only your KDA, CS, vision, and duration, shows a ten-game trend, and can optionally generate advice with your own OpenAI-compatible API; the key is stored in macOS Keychain |
-| 打野路线 | 可选择蓝/红起手和全清、三级抓人或反向入侵，在召唤师峡谷小地图显示可视路线 | Choose Blue/Red start and full-clear, level-three gank, or reverse-invade routes shown visually on the Rift minimap |
+| 打野路线 | 游戏内面板可开关路线并选择蓝/红起手、全清、三级抓人或反向入侵；路线按阵营与小地图尺寸自适应，并在首轮刷野完成后自动收起 | Use the in-game panel to toggle the route and choose Blue/Red start, full clear, level-three gank, or reverse invade; routes adapt to team and minimap size and close after the first clear |
 | 多语言界面与识别 | Wexi 界面可选择 12 种语言；游戏客户端语言可独立选择 15 种，并加载对应 OP.GG 海克斯名称与 Vision OCR | Choose from 12 Wexi interface languages and independently select one of 15 game-client languages for localized OP.GG augment names and Vision OCR |
 
 正常提示窗口支持鼠标穿透，不会阻止点击技能或海克斯卡片；只有明确显示的收起/恢复按钮接收鼠标点击。游戏进入后台时，提示会自动隐藏。
@@ -169,9 +181,9 @@ swift test
 ./script/package_source.sh
 ```
 
-当前测试套件包含 64 项测试，其中四项公共网页冒烟测试需要单独提供本地 fixture。
+当前测试套件包含 69 项测试，其中四项公共网页冒烟测试需要单独提供本地 fixture。
 
-The current suite contains 64 tests. Four public-page smoke tests require optional local fixtures.
+The current suite contains 69 tests. Four public-page smoke tests require optional local fixtures.
 
 ## 已知限制 / Known Limitations
 

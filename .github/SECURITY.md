@@ -8,8 +8,8 @@ Security fixes target the latest public release and the `main` branch. Users of 
 
 | Version | Supported |
 | --- | --- |
-| 0.5.6 | Yes |
-| 0.5.5 and earlier | No |
+| 0.6.0 | Yes |
+| 0.5.7 and earlier | No |
 
 ## Reporting a vulnerability / 报告漏洞
 

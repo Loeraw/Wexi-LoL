@@ -55,6 +55,11 @@ main { width: min(var(--max), calc(100% - 48px)); margin: 0 auto; }
 .product-shot { margin: 0; overflow: hidden; border: 1px solid #344255; border-radius: 17px; background: #0c141e; box-shadow: 0 38px 90px rgba(0,0,0,.42); }
 .product-shot img { width: 100%; height: auto; display: block; }
 .features { padding: 90px 0; border-top: 1px solid rgba(255,255,255,.07); }
+.showcase { padding: 90px 0; border-top: 1px solid rgba(255,255,255,.07); }
+.showcase-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.showcase figure { margin: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 15px; background: var(--surface); }
+.showcase img { width: 100%; height: auto; display: block; }
+.showcase figcaption { padding: 14px 18px; color: var(--muted); font-size: 14px; }
 .section-heading { text-align: center; margin-bottom: 42px; }
 h2 { margin: 0; font-size: clamp(31px, 3.2vw, 46px); letter-spacing: -.035em; line-height: 1.08; }
 .section-heading p, .download > p { color: var(--muted); font-size: 17px; }
@@ -79,6 +84,7 @@ footer a { color: #dfe5ed; }
   .hero h1, .hero p { margin-left: auto; margin-right: auto; }
   .actions, .proof { justify-content: center; }
   .feature-grid { grid-template-columns: repeat(2, 1fr); }
+  .showcase-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 620px) {
   .site-header, main, footer { width: min(100% - 28px, var(--max)); }
