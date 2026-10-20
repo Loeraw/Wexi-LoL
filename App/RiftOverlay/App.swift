@@ -11,6 +11,7 @@ final class ControlWindow: NSWindow {}
     let calibration = SkillCalibration()
     let objectiveTimers = ObjectiveTimerStore()
     let lobbyScout = LobbyScoutStore()
+    let updateChecker = UpdateChecker()
     private let hints = HintOverlayController()
     private let objectiveTimerOverlay = ObjectiveTimerOverlayController()
     private let itemBuildOverlay = ItemBuildOverlayController()
@@ -32,7 +33,9 @@ final class ControlWindow: NSWindow {}
         controls.isReleasedWhenClosed = false
         controls.contentView = NSHostingView(rootView: GuideControlView(model: model, guide: guide, recognition: recognition,
             calibration: calibration, objectiveTimers: objectiveTimers, lobbyScout: lobbyScout,
-            startCalibration: { [weak self] in self?.startCalibration() }))
+            updateChecker: updateChecker, displayedVersion: displayedVersion,
+            startCalibration: { [weak self] in self?.startCalibration() },
+            copyDiagnostics: { [weak self] in self?.copyDiagnostics() }))
         controls.center()
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         updateLanguage()
@@ -46,6 +49,7 @@ final class ControlWindow: NSWindow {}
         if let layoutTimer { RunLoop.main.add(layoutTimer, forMode: .common) }
         registerHotkeys()
         guide.load(); recognition.start(guide: guide, objectiveTimers: objectiveTimers); objectiveTimers.start(); lobbyScout.start()
+        updateChecker.check(currentVersion: displayedVersion)
         updateHints()
         if !CGPreflightScreenCaptureAccess() {
             showControls()
@@ -91,6 +95,43 @@ final class ControlWindow: NSWindow {}
     @objc func cancelCalibration() { calibration.cancel(); updateHints() }
     @objc func toggleCalibration() { if calibration.active { finishCalibration() } else { startCalibration() } }
     @objc func quitApp() { NSApp.terminate(nil) }
+    private func diagnosticStatus() -> [String: Any] {
+        let game = recognition.capturedGameSurface ?? GameSurface.current()
+        return [
+            "version": displayedVersion,
+            "macOS": ProcessInfo.processInfo.operatingSystemVersionString,
+            "interfaceLanguage": LanguageSettings.shared.selection.rawValue,
+            "gameLanguage": LanguageSettings.shared.gameSelection,
+            "screenRecordingPermission": recognition.hasScreenPermission,
+            "gameForeground": GameWindow.frontmostPID != nil,
+            "gameWindowDetected": game != nil,
+            "gameWindowSize": game.map { "\(Int($0.frame.width))x\(Int($0.frame.height))" } ?? "none",
+            "championStatus": recognition.championStatus,
+            "guideMode": guide.mode.rawValue,
+            "guidePatch": guide.patch,
+            "augmentCount": guide.augments.count,
+            "itemBuildCount": guide.itemBuilds.count,
+            "overlayScale": model.overlayScale,
+            "overlayOpacity": model.opacity,
+            "objectiveMode": objectiveTimers.mode,
+            "objectiveTimerCount": objectiveTimers.rows.count,
+            "playerScoutStatus": lobbyScout.status,
+            "playerCount": lobbyScout.rows.count,
+            "loadedPlayerProfiles": lobbyScout.loadedProfileCount,
+            "failedPlayerProfiles": lobbyScout.failedProfileCount,
+            "playerRegion": lobbyScout.activeRegion?.rawValue ?? "auto",
+            "scoreboardVisible": recognition.isScoreboardVisible,
+            "generatedAt": ISO8601DateFormatter().string(from: Date())
+        ]
+    }
+    private func copyDiagnostics() {
+        guard let data = try? JSONSerialization.data(withJSONObject: diagnosticStatus(), options: [.prettyPrinted, .sortedKeys]),
+              let report = String(data: data, encoding: .utf8) else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(report, forType: .string)
+        model.diagnosticStatus = "诊断信息已复制；不包含截图或玩家名称。"
+    }
     @objc func updateHints() {
         recognition.pauseForApplicationChange()
         hints.update(model: model, guide: guide, recognition: recognition, calibration: calibration)

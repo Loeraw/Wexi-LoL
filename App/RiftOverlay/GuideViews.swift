@@ -110,7 +110,10 @@ struct GuideControlView: View {
     @ObservedObject var calibration: SkillCalibration
     @ObservedObject var objectiveTimers: ObjectiveTimerStore
     @ObservedObject var lobbyScout: LobbyScoutStore
+    @ObservedObject var updateChecker: UpdateChecker
+    let displayedVersion: String
     let startCalibration: () -> Void
+    let copyDiagnostics: () -> Void
     @State private var showingSettings = false
 
     var body: some View {
@@ -305,6 +308,37 @@ struct GuideControlView: View {
                         Slider(value: $model.opacity, in: 0.35...1)
                         Text("\(Int(model.opacity * 100))%").monospacedDigit().foregroundStyle(.secondary).frame(width: 42)
                     }
+                    HStack(spacing: 14) {
+                        Text(L10n.text("提示大小")).frame(width: 90, alignment: .leading)
+                        Slider(value: $model.overlayScale, in: 0.75...1.35, step: 0.05)
+                        Text("\(Int(model.overlayScale * 100))%").monospacedDigit().foregroundStyle(.secondary).frame(width: 42)
+                    }
+                }
+
+                settingsSection(L10n.text("更新")) {
+                    HStack {
+                        Text(L10n.text("当前版本 %@", displayedVersion))
+                        Spacer()
+                        if updateChecker.state == .checking { ProgressView().controlSize(.small) }
+                        Button(L10n.text("检查更新")) { updateChecker.check(currentVersion: displayedVersion) }
+                            .disabled(updateChecker.state == .checking)
+                    }
+                    switch updateChecker.state {
+                    case .idle:
+                        EmptyView()
+                    case .checking:
+                        Text(L10n.text("正在检查更新…")).font(.caption).foregroundStyle(.secondary)
+                    case .current:
+                        Text(L10n.text("已是最新版本")).font(.caption).foregroundStyle(guideMint)
+                    case .available(let version):
+                        HStack {
+                            Text(L10n.text("发现新版本 v%@", version)).font(.caption).foregroundStyle(guideMint)
+                            Spacer()
+                            Button(L10n.text("下载 v%@", version)) { updateChecker.openRelease() }
+                        }
+                    case .failed:
+                        Text(L10n.text("检查更新失败，请稍后重试。")).font(.caption).foregroundStyle(.orange)
+                    }
                 }
 
                 settingsSection(L10n.text("屏幕录制")) {
@@ -386,6 +420,13 @@ struct GuideControlView: View {
                     Text(L10n.text("⌥⌘K 开始/保存校准\nTab 显示玩家资料并同步大乱斗血包计时\n⌘M 收起设置到菜单栏"))
                         .font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(4)
                     if !model.hotkeyStatus.isEmpty { Text(L10n.text(model.hotkeyStatus)).font(.caption).foregroundStyle(.orange) }
+                    Divider()
+                    Button(L10n.text("复制诊断信息"), action: copyDiagnostics)
+                    Text(L10n.text("复制应用状态、权限、窗口尺寸和加载结果，便于排查问题；不包含截图、OCR 文字或玩家名称。"))
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                    if !model.diagnosticStatus.isEmpty {
+                        Text(L10n.text(model.diagnosticStatus)).font(.caption).foregroundStyle(guideMint)
+                    }
                 }
             }
             .padding(28)

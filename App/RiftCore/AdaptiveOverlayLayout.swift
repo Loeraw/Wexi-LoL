@@ -5,9 +5,11 @@ public enum AdaptiveOverlayLayout {
     /// Keeps controls readable at small window sizes while avoiding oversized
     /// panels on high-resolution displays. The original layout was authored at
     /// 2560×1440.
-    public static func scale(width: Double, height: Double) -> Double {
-        guard width.isFinite, height.isFinite, width > 0, height > 0 else { return 1 }
-        return min(1.15, max(0.80, min(width / 2560, height / 1440)))
+    public static func scale(width: Double, height: Double, preference: Double = 1) -> Double {
+        let preferredScale = preference.isFinite ? min(1.35, max(0.75, preference)) : 1
+        guard width.isFinite, height.isFinite, width > 0, height > 0 else { return preferredScale }
+        let resolutionScale = min(1.15, max(0.80, min(width / 2560, height / 1440)))
+        return resolutionScale * preferredScale
     }
 
     /// League centers most fixed-aspect UI inside a 16:9 region on ultrawide

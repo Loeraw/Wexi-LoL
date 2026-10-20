@@ -100,7 +100,12 @@ final class LiveClient {
 }
 
 @MainActor final class OverlayModel: ObservableObject {
-    @Published var opacity = 0.94
+    @Published var opacity: Double {
+        didSet { UserDefaults.standard.set(opacity, forKey: "overlayOpacity.v1") }
+    }
+    @Published var overlayScale: Double {
+        didSet { UserDefaults.standard.set(overlayScale, forKey: "overlayScale.v1") }
+    }
     @Published var itemBuildEnabled: Bool {
         didSet { UserDefaults.standard.set(itemBuildEnabled, forKey: "itemBuildOverlayEnabled.v1") }
     }
@@ -109,8 +114,13 @@ final class LiveClient {
     }
     @Published var hotkeyStatus = ""
     @Published var overlayStatus = "等待对局 · 平时不显示提示"
+    @Published var diagnosticStatus = ""
 
     init() {
+        let storedOpacity = UserDefaults.standard.object(forKey: "overlayOpacity.v1") as? Double ?? 0.94
+        opacity = min(1, max(0.35, storedOpacity))
+        let storedScale = UserDefaults.standard.object(forKey: "overlayScale.v1") as? Double ?? 1
+        overlayScale = min(1.35, max(0.75, storedScale))
         itemBuildEnabled = UserDefaults.standard.object(forKey: "itemBuildOverlayEnabled.v1") == nil
             ? true : UserDefaults.standard.bool(forKey: "itemBuildOverlayEnabled.v1")
         playerScoutEnabled = UserDefaults.standard.object(forKey: "playerScoutEnabled.v1") == nil

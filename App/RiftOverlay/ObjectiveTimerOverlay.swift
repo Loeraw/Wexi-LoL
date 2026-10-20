@@ -124,7 +124,7 @@ private struct HealthRelicMapTimers: View {
         }
         let panel = self.panel ?? makePanel()
         let scale = CGFloat(AdaptiveOverlayLayout.scale(
-            width: Double(game.frame.width), height: Double(game.frame.height)
+            width: Double(game.frame.width), height: Double(game.frame.height), preference: model.overlayScale
         ))
         let nextSignature = store.rows.map { "\($0.kind.rawValue):\($0.slot ?? 0):\($0.remaining)" }.joined(separator: "|")
             + ":\(scale):\(LanguageSettings.shared.selection.rawValue):\(Int(model.opacity * 100))"

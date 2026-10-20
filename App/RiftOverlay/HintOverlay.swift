@@ -115,7 +115,8 @@ private struct HintBadge: View {
             for key in ["Q", "W", "E", "R"] {
                 if let anchor = calibration.anchors[key] {
                     show(id: "cal-" + key, text: key + L10n.text(" ＋ 拖动"), anchor: anchor, offset: 0,
-                         size: NSSize(width: 84, height: 30), game: game, calibration: true, opacity: 1)
+                         size: NSSize(width: 84, height: 30), game: game, calibration: true, opacity: 1,
+                         scalePreference: model.overlayScale)
                     shown.insert("cal-" + key)
                 }
             }
@@ -144,14 +145,15 @@ private struct HintBadge: View {
                     let hasRates = augment.pickRate != nil || augment.winRate != nil
                     show(id: id, text: augmentHintText(augment), anchor: card.anchor, offset: 0,
                          size: NSSize(width: hasRates ? 248 : 42, height: 28),
-                         game: game, calibration: false, opacity: model.opacity)
+                         game: game, calibration: false, opacity: model.opacity, scalePreference: model.overlayScale)
                     shown.insert(id)
                 }
             } else if let skill = recognition.recommendedSkill {
                 let anchor = calibration.anchor(for: skill, aspect: aspect) ?? (freshFrame ? recognition.skillAnchors[skill] : nil)
                 if let anchor {
                     show(id: "skill", text: L10n.text("推荐 %@ ↓", skill), anchor: anchor, offset: 27,
-                         size: NSSize(width: 90, height: 28), game: game, calibration: false, opacity: model.opacity)
+                         size: NSSize(width: 90, height: 28), game: game, calibration: false,
+                         opacity: model.opacity, scalePreference: model.overlayScale)
                     shown.insert("skill")
                 }
             }
@@ -179,9 +181,9 @@ private struct HintBadge: View {
         return parts.joined(separator: " · ")
     }
     private func show(id: String, text: String, anchor: HintAnchor, offset: CGFloat, size: NSSize,
-                      game: GameSurface, calibration: Bool, opacity: Double) {
+                      game: GameSurface, calibration: Bool, opacity: Double, scalePreference: Double) {
         let scale = CGFloat(AdaptiveOverlayLayout.scale(
-            width: Double(game.frame.width), height: Double(game.frame.height)
+            width: Double(game.frame.width), height: Double(game.frame.height), preference: scalePreference
         ))
         let displaySize = NSSize(width: size.width * scale, height: size.height * scale)
         let displayOffset = offset * scale

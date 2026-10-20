@@ -361,7 +361,7 @@ private struct LoadingScoutControlView: View {
         else if showLoading { loadingAnchors.merge(recognizedAnchors) { _, new in new } }
         let panel = self.panel ?? makePanel()
         let scale = CGFloat(AdaptiveOverlayLayout.scale(
-            width: Double(game.frame.width), height: Double(game.frame.height)
+            width: Double(game.frame.width), height: Double(game.frame.height), preference: model.overlayScale
         ))
         let championNames = Dictionary(uniqueKeysWithValues: guide.champions.map { ($0.id, $0.name) })
         let activeAnchors = showScoreboard ? scoreboardAnchors : loadingAnchors

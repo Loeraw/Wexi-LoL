@@ -79,6 +79,9 @@ final class ContextualHintsTests: XCTestCase {
         XCTAssertEqual(AdaptiveOverlayLayout.scale(width: 1920, height: 1080), 0.8, accuracy: 0.001)
         XCTAssertEqual(AdaptiveOverlayLayout.scale(width: 3840, height: 2160), 1.15, accuracy: 0.001)
         XCTAssertEqual(AdaptiveOverlayLayout.scale(width: 0, height: 0), 1)
+        XCTAssertEqual(AdaptiveOverlayLayout.scale(width: 2560, height: 1440, preference: 1.2), 1.2, accuracy: 0.001)
+        XCTAssertEqual(AdaptiveOverlayLayout.scale(width: 2560, height: 1440, preference: 2), 1.35, accuracy: 0.001)
+        XCTAssertEqual(AdaptiveOverlayLayout.scale(width: 0, height: 0, preference: 0.5), 0.75, accuracy: 0.001)
     }
 
     func testUltrawideLayoutUsesCenteredSixteenByNineContent() {

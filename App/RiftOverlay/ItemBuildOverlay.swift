@@ -128,7 +128,7 @@ private struct ItemBuildOverlayControlView: View {
         }
         let panel = self.panel ?? makePanel()
         let scale = CGFloat(AdaptiveOverlayLayout.scale(
-            width: Double(game.frame.width), height: Double(game.frame.height)
+            width: Double(game.frame.width), height: Double(game.frame.height), preference: model.overlayScale
         ))
         let nextSignature = build.items.map { String($0.id) }.joined(separator: ",")
             + ":\(recognition.ownedItemIDs.sorted())"

@@ -46,7 +46,8 @@ The current build uses a local ad-hoc signature and has not been notarized by Ap
 | 出装推荐 | 显示 OP.GG 主流三件套、胜率、选用率和下一件装备；游戏内面板可随时收起和恢复 | Shows popular OP.GG three-item builds, win rate, pick rate, and the next item; the in-game panel can be collapsed and restored |
 | 模式面板 | 主界面按排位、大乱斗混乱、极地大乱斗和斗魂竞技场分别展示攻略；斗魂海克斯根据胜率与样本生成评级 | Separate guide panels for Ranked, ARAM: Mayhem, ARAM, and Arena; Arena augment tiers are calculated from win rate and sample size |
 | 玩家资料 | 自动识别当前区服，在 Loading 时读取本局 10 名玩家的段位、胜率和最近 5 场 W/L；排位 Tab 面板还显示前三常用英雄及使用率 | Auto-detects the current region and loads rank, win rate, and recent W/L for all 10 players; Ranked Tab panels also show each player's top three champions and usage rates |
-| 分辨率适配 | Loading 与 Tab 玩家卡片优先跟随 OCR 识别到的实际位置；超宽屏使用居中 16:9 区域，提示和面板会随游戏窗口缩放 | Loading and Tab player cards follow OCR-detected positions; ultrawide layouts use a centered 16:9 region, and hints and panels scale with the game window |
+| 分辨率适配 | Loading 与 Tab 玩家卡片优先跟随 OCR 识别到的实际位置；超宽屏使用居中 16:9 区域，提示和面板会随游戏窗口缩放，并可在设置中统一调整大小 | Loading and Tab player cards follow OCR-detected positions; ultrawide layouts use a centered 16:9 region, and hints and panels scale with the game window with an adjustable global size |
+| 更新与诊断 | 启动时检查 GitHub Release 新版本；设置页可复制不含截图、OCR 文字或玩家名称的诊断信息 | Checks GitHub Releases for updates at launch; Settings can copy diagnostics that exclude screenshots, OCR text, and player names |
 | 多语言界面与识别 | Wexi 界面可选择 12 种语言；游戏客户端语言可独立选择 15 种，并加载对应 OP.GG 海克斯名称与 Vision OCR | Choose from 12 Wexi interface languages and independently select one of 15 game-client languages for localized OP.GG augment names and Vision OCR |
 
 正常提示窗口支持鼠标穿透，不会阻止点击技能或海克斯卡片；只有明确显示的收起/恢复按钮接收鼠标点击。游戏进入后台时，提示会自动隐藏。
