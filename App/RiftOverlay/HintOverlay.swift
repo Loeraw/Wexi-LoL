@@ -141,7 +141,7 @@ private struct HintBadge: View {
                 for card in cards {
                     guard let augment = guide.augments.first(where: { $0.id == card.id }) else { continue }
                     let id = "card-\(card.id)"
-                    let hasRates = augment.pickRate != nil && augment.winRate != nil
+                    let hasRates = augment.pickRate != nil || augment.winRate != nil
                     show(id: id, text: augmentHintText(augment), anchor: card.anchor, offset: 0,
                          size: NSSize(width: hasRates ? 248 : 42, height: 28),
                          game: game, calibration: false, opacity: model.opacity)
@@ -169,11 +169,14 @@ private struct HintBadge: View {
         if model.overlayStatus != text { model.overlayStatus = text }
     }
     private func augmentHintText(_ augment: AugmentRating) -> String {
-        guard let pickRate = augment.pickRate, let winRate = augment.winRate else {
-            return augment.tierLabel
+        var parts = [augment.tierLabel]
+        if let pickRate = augment.pickRate {
+            parts.append(L10n.text("选用率 %.1f%%", pickRate))
         }
-        return augment.tierLabel + " · " + L10n.text("选用率 %.1f%%", pickRate)
-            + " · " + L10n.text("胜率 %.1f%%", winRate)
+        if let winRate = augment.winRate {
+            parts.append(L10n.text("胜率 %.1f%%", winRate))
+        }
+        return parts.joined(separator: " · ")
     }
     private func show(id: String, text: String, anchor: HintAnchor, offset: CGFloat, size: NSSize,
                       game: GameSurface, calibration: Bool, opacity: Double) {

@@ -40,6 +40,22 @@ final class GuideParserTests: XCTestCase {
     func testUnknownHTMLFailsInsteadOfInventingRatings() {
         XCTAssertThrowsError(try GuideParser.parse("<html>Site unavailable</html>"))
     }
+    func testMayhemStatsParsesEmbeddedGlobalRatesByRiotID() throws {
+        let html = try page([
+            "initialRows": [
+                ["id": 2031, "name": "DropBear", "wr": 54.71, "pr": 1.67, "n": 5_800_000],
+                ["id": 1353, "name": "Tank Engine", "wr": "50.75", "pr": "5.17", "n": "18,000,000"],
+                ["id": 9999, "wr": 120, "pr": 1, "n": 10]
+            ],
+            "initialMeta": ["patch": "16.20"]
+        ])
+        let result = try MayhemStatsParser.parse(html)
+        XCTAssertEqual(result.patch, "16.20")
+        XCTAssertEqual(result.stats.count, 2)
+        XCTAssertEqual(result.stats[2031]?.winRate, 54.71)
+        XCTAssertEqual(result.stats[2031]?.pickRate, 1.67)
+        XCTAssertEqual(result.stats[1353]?.games, 18_000_000)
+    }
     func testItemBuildParsesWinRateSamplesAndLocalizedMetadata() throws {
         let items: [[String: Any]] = [
             ["id": 3115, "name": "纳什之牙", "image_url": "https://cdn.example/3115.png"],
@@ -94,6 +110,17 @@ final class GuideParserTests: XCTestCase {
         XCTAssertGreaterThan(augments.champions.count, 100)
         XCTAssertEqual(augments.patch, skills.patch)
         XCTAssertNotNil(skills.skills)
+    }
+    func testFetchedMayhemStatsWhenProvided() throws {
+        guard let path = ProcessInfo.processInfo.environment["RIFT_MAYHEM_STATS_FIXTURE"] else {
+            throw XCTSkip("Set RIFT_MAYHEM_STATS_FIXTURE for live Mayhem stats smoke test")
+        }
+        let page = try MayhemStatsParser.parse(String(contentsOfFile: path))
+        XCTAssertGreaterThan(page.stats.count, 150)
+        XCTAssertNotNil(page.patch)
+        XCTAssertTrue(page.stats.values.allSatisfy {
+            (0...100).contains($0.winRate) && (0...100).contains($0.pickRate) && $0.games > 0
+        })
     }
     func testFetchedModeItemPagesWhenProvided() throws {
         guard let path = ProcessInfo.processInfo.environment["RIFT_MODE_FIXTURE_DIR"] else {

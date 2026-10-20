@@ -109,8 +109,18 @@ private struct GuideCacheEntry {
                     async let item = Self.fetch(itemURL, language: language)
                     async let skill = try? Self.fetch(skillURL, language: language)
                     async let augment = selectedMode.supportsAugmentTiers ? (try? Self.fetch(augmentURL, language: language)) : nil
+                    async let mayhemStats = selectedMode == .mayhem ? (try? Self.fetchMayhemStats()) : nil
                     let fetchedItems = try await item
-                    itemPage = fetchedItems; skillPage = await skill; augmentPage = await augment
+                    let fetchedAugments = await augment
+                    let fetchedMayhemStats = await mayhemStats
+                    itemPage = fetchedItems
+                    skillPage = await skill
+                    if let fetchedAugments, let fetchedMayhemStats,
+                       fetchedMayhemStats.patch == nil || fetchedMayhemStats.patch == fetchedAugments.patch {
+                        augmentPage = Self.merging(fetchedMayhemStats, into: fetchedAugments)
+                    } else {
+                        augmentPage = fetchedAugments
+                    }
                     primaryPage = fetchedItems
                     date = Date()
                 }
@@ -202,5 +212,33 @@ private struct GuideCacheEntry {
         guard let http = response as? HTTPURLResponse, http.statusCode == 200,
               let html = String(data: data, encoding: .utf8) else { throw URLError(.badServerResponse) }
         return try GuideParser.parse(html)
+    }
+
+    private nonisolated static func fetchMayhemStats() async throws -> MayhemAugmentStatsPage {
+        var request = URLRequest(url: URL(string: "https://hexmayhem.com/augments")!)
+        request.timeoutInterval = 20
+        request.setValue("WexiLoL/0.5.7", forHTTPHeaderField: "User-Agent")
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.httpShouldSetCookies = false
+        configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
+        let session = URLSession(configuration: configuration)
+        defer { session.invalidateAndCancel() }
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200,
+              let html = String(data: data, encoding: .utf8) else { throw URLError(.badServerResponse) }
+        return try MayhemStatsParser.parse(html)
+    }
+
+    private nonisolated static func merging(_ page: MayhemAugmentStatsPage, into guide: GuidePage) -> GuidePage {
+        var result = guide
+        result.augments = guide.augments.map { augment in
+            guard let stats = page.stats[augment.id] else { return augment }
+            return AugmentRating(id: augment.id, name: augment.name, key: augment.key,
+                                 tier: augment.tier, rarity: augment.rarity,
+                                 englishName: augment.englishName, winRate: stats.winRate,
+                                 pickRate: stats.pickRate, games: stats.games,
+                                 alternateNames: augment.alternateNames)
+        }
+        return result
     }
 }

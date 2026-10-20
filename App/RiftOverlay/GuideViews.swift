@@ -83,8 +83,16 @@ struct AugmentRow: View {
                 .accessibilityLabel(L10n.text("%@，评级 %@", L10n.text(augment.rarityLabel), augment.tierLabel))
             VStack(alignment: .leading, spacing: 3) {
                 Text(augment.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
-                if let winRate = augment.winRate, let pickRate = augment.pickRate, let games = augment.games {
-                    Text(L10n.text("胜率 %.1f%% · 选用率 %.1f%% · %d 场", winRate, pickRate, games))
+                if let winRate = augment.winRate, let pickRate = augment.pickRate {
+                    if let games = augment.games {
+                        Text(L10n.text("胜率 %.1f%% · 选用率 %.1f%% · %d 场", winRate, pickRate, games))
+                            .font(.system(size: 9)).foregroundStyle(.secondary)
+                    } else {
+                        Text(L10n.text("胜率 %.1f%% · 选用率 %.1f%%", winRate, pickRate))
+                            .font(.system(size: 9)).foregroundStyle(.secondary)
+                    }
+                } else if let pickRate = augment.pickRate {
+                    Text(L10n.text("选用率 %.1f%%", pickRate))
                         .font(.system(size: 9)).foregroundStyle(.secondary)
                 }
             }
@@ -241,6 +249,9 @@ struct GuideControlView: View {
                         Link(L10n.text("OP.GG 加点来源 ↗"), destination: guide.sourceURL("skills"))
                         if guide.mode.supportsAugmentTiers {
                             Link(L10n.text("OP.GG 海克斯来源 ↗"), destination: guide.sourceURL("augments"))
+                            if guide.mode == .mayhem {
+                                Link("HexMayhem ↗", destination: URL(string: "https://hexmayhem.com/augments")!)
+                            }
                         }
                     }.font(.system(size: 11))
                     Text(L10n.text("Wexi LoL 与 Riot Games 无关联，也不代表 Riot Games 或其官方相关人员的观点。League of Legends、Riot Games 及相关资产是 Riot Games, Inc. 的商标或注册商标。"))

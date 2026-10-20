@@ -90,6 +90,95 @@ public struct GuidePage: Sendable {
     public var itemBuilds: [ItemBuild] = []
     public var patch: String?
 }
+
+public struct MayhemAugmentStats: Equatable, Sendable {
+    public let id: Int
+    public let winRate: Double
+    public let pickRate: Double
+    public let games: Int
+
+    public init(id: Int, winRate: Double, pickRate: Double, games: Int) {
+        self.id = id
+        self.winRate = winRate
+        self.pickRate = pickRate
+        self.games = games
+    }
+}
+
+public struct MayhemAugmentStatsPage: Equatable, Sendable {
+    public let patch: String?
+    public let stats: [Int: MayhemAugmentStats]
+
+    public init(patch: String?, stats: [Int: MayhemAugmentStats]) {
+        self.patch = patch
+        self.stats = stats
+    }
+}
+
+public enum MayhemStatsParser {
+    /// Reads the JSON already embedded in HexMayhem's public augment page.
+    /// IDs are Riot augment IDs, so localized names never need fuzzy matching.
+    public static func parse(_ html: String) throws -> MayhemAugmentStatsPage {
+        let pattern = #"<script[^>]*>\s*self\.__next_f\.push\((.*?)\)\s*;?\s*</script>"#
+        let regex = try NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators])
+        let ns = html as NSString
+        var flight = ""
+        for match in regex.matches(in: html, range: NSRange(location: 0, length: ns.length)) {
+            let raw = ns.substring(with: match.range(at: 1))
+            guard let array = try? JSONSerialization.jsonObject(with: Data(raw.utf8)) as? [Any],
+                  array.count > 1, let kind = array[0] as? Int, kind == 1,
+                  let value = array[1] as? String else { continue }
+            flight += value
+        }
+
+        var patch: String?
+        var stats: [Int: MayhemAugmentStats] = [:]
+        func walk(_ object: Any) {
+            if let dict = object as? [String: Any] {
+                if let meta = dict["initialMeta"] as? [String: Any],
+                   let value = meta["patch"] as? String,
+                   value.range(of: #"^\d+\.\d+(\.\d+)?$"#, options: .regularExpression) != nil {
+                    patch = value
+                }
+                if let rows = (dict["initialRows"] as? [[String: Any]])
+                    ?? (dict["initialAugments"] as? [[String: Any]]) {
+                    for row in rows {
+                        guard let id = integer(row["id"]),
+                              let winRate = number(row["wr"]), (0...100).contains(winRate),
+                              let pickRate = number(row["pr"]), (0...100).contains(pickRate),
+                              let games = integer(row["n"]), games > 0 else { continue }
+                        stats[id] = MayhemAugmentStats(id: id, winRate: winRate,
+                                                      pickRate: pickRate, games: games)
+                    }
+                }
+                for value in dict.values { walk(value) }
+            } else if let array = object as? [Any] {
+                array.forEach(walk)
+            }
+        }
+        for line in flight.split(separator: "\n") {
+            guard let colon = line.firstIndex(of: ":") else { continue }
+            let payload = line[line.index(after: colon)...]
+            if let object = try? JSONSerialization.jsonObject(with: Data(payload.utf8), options: .fragmentsAllowed) {
+                walk(object)
+            }
+        }
+        guard !stats.isEmpty else { throw GuideParseError.pageStructureChanged }
+        return MayhemAugmentStatsPage(patch: patch, stats: stats)
+    }
+
+    private static func number(_ value: Any?) -> Double? {
+        if let value = value as? NSNumber { return value.doubleValue }
+        if let value = value as? String { return Double(value.replacingOccurrences(of: ",", with: "")) }
+        return nil
+    }
+
+    private static func integer(_ value: Any?) -> Int? {
+        if let value = value as? NSNumber { return value.intValue }
+        if let value = value as? String { return Int(value.replacingOccurrences(of: ",", with: "")) }
+        return nil
+    }
+}
 public enum GuideParseError: Error { case pageStructureChanged }
 
 // Read JSON already included in a public OP.GG page; never execute page scripts.
@@ -127,7 +216,10 @@ public enum GuideParser {
                               let key = row["key"] as? String, let tier = row["tier"] as? Int,
                               (0...5).contains(tier), let rarity = row["rarity"] as? Int else { return nil }
                         let winRate = number(row["win_rate"]).flatMap { (0...100).contains($0) ? $0 : nil }
-                        let pickRate = number(row["pick_rate"]).flatMap { (0...100).contains($0) ? $0 : nil }
+                        // Current Mayhem pages call champion-specific pick rate
+                        // `popular`; older pages used `pick_rate`.
+                        let pickRate = number(row["pick_rate"] ?? row["popular"])
+                            .flatMap { (0...100).contains($0) ? $0 : nil }
                         let games = count(row["play"])
                         return AugmentRating(id: id, name: name, key: key, tier: tier, rarity: rarity,
                                              winRate: winRate, pickRate: pickRate, games: games)

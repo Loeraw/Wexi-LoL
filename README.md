@@ -164,9 +164,9 @@ swift test
 ./script/package_source.sh
 ```
 
-当前测试套件包含 61 项测试，其中三项公共网页冒烟测试需要单独提供本地 fixture。
+当前测试套件包含 64 项测试，其中四项公共网页冒烟测试需要单独提供本地 fixture。
 
-The current suite contains 61 tests. Three public-page smoke tests require optional local fixtures.
+The current suite contains 64 tests. Four public-page smoke tests require optional local fixtures.
 
 ## 已知限制 / Known Limitations
 
@@ -182,11 +182,11 @@ The current suite contains 61 tests. Three public-page smoke tests require optio
 
 ## 致谢与数据归属 / Credits and Data Attribution
 
-Wexi LoL 的海克斯评级、技能顺序、推荐出装、胜率以及公开玩家资料以 [OP.GG](https://op.gg/) 公共页面提供的数据为来源。感谢 OP.GG 为英雄联盟玩家社区提供统计数据与对局信息。
+Wexi LoL 的英雄专属海克斯评级、技能顺序、推荐出装以及公开玩家资料以 [OP.GG](https://op.gg/) 公共页面提供的数据为来源。海克斯大乱斗的全局海克斯胜率、选取率和样本数来自 [HexMayhem](https://hexmayhem.com/augments)。感谢这些站点为英雄联盟玩家社区提供统计数据与对局信息。
 
 OP.GG 名称、品牌及相关内容归其各自权利人所有。Wexi LoL 是独立的开源项目，与 OP.GG 不存在隶属、合作、赞助、授权或认可关系。
 
-Wexi LoL uses data available from public [OP.GG](https://op.gg/) pages for augment ratings, skill orders, recommended builds, win rates, and public player profiles. We thank OP.GG for providing statistics and match information to the League of Legends community.
+Wexi LoL uses public [OP.GG](https://op.gg/) pages for champion-specific augment ratings, skill orders, recommended builds, and public player profiles. Global ARAM: Mayhem augment win rates, pick rates, and sample sizes come from [HexMayhem](https://hexmayhem.com/augments). We thank these sites for providing statistics and match information to the League of Legends community.
 
 The OP.GG name, brand, and related content belong to their respective owners. Wexi LoL is an independent open-source project and is not affiliated with, partnered with, sponsored by, authorized by, or endorsed by OP.GG.
 
