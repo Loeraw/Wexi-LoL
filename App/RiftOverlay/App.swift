@@ -180,7 +180,7 @@ final class ControlWindow: NSWindow {}
                                   // state after entering a match. ObjectiveTimerStore keeps
                                   // polling Riot's live game mode, so it is the reliable source
                                   // for an in-game jungle overlay.
-                                  gameMode: objectiveTimers.mode, game: game)
+                                  gameMode: objectiveTimers.mode, activeTeam: objectiveTimers.activeTeam, game: game)
         // One small local status file, overwritten every two seconds. No screenshots,
         // OCR text, account names or player identifiers are recorded.
         if Date().timeIntervalSince(lastDiagnosticWrite) >= 2 {
@@ -203,6 +203,7 @@ final class ControlWindow: NSWindow {}
                 "scoreboardVisible": recognition.isScoreboardVisible,
                 "jungleRouteEnabled": jungleRoute.enabled,
                 "jungleRouteMode": objectiveTimers.mode,
+                "jungleRouteTeam": objectiveTimers.activeTeam,
                 "recommendation": recognition.recommendedSkill ?? "none",
                 "anchors": recognition.skillAnchors.mapValues { ["x": $0.x, "y": $0.y] },
                 "cards": recognition.cardHints.map(\.id)

@@ -30,6 +30,10 @@ public enum ChampionRecognition {
         return items.flatMap { item in Array(repeating: item.itemID, count: max(1, item.count ?? 1)) }
     }
 
+    public static func team(active: ActivePlayer, roster: [LiveRosterPlayer]) -> String? {
+        ownPlayer(active: active, roster: roster)?.team
+    }
+
     private static func ownPlayer(active: ActivePlayer, roster: [LiveRosterPlayer]) -> LiveRosterPlayer? {
         if let riotID = active.riotId, !riotID.isEmpty {
             return roster.first { $0.riotId == riotID }

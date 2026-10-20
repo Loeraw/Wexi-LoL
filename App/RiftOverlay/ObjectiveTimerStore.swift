@@ -6,6 +6,7 @@ import RiftCore
         didSet { UserDefaults.standard.set(enabled, forKey: Self.enabledKey) }
     }
     @Published private(set) var mode = ""
+    @Published private(set) var activeTeam = ""
     @Published private(set) var rows: [ObjectiveCountdown] = []
     @Published private var statusKey = "等待对局数据…"
     @Published private var statusCount: Int?
@@ -126,6 +127,7 @@ import RiftCore
                 lastRelicSync = nil
             }
             mode = incomingMode
+            if let team = state.activeTeam, !team.isEmpty { activeTeam = team.uppercased() }
             sampledGameTime = state.game.gameTime
             sampledAt = Date()
             events = state.events
@@ -151,6 +153,7 @@ import RiftCore
 
     private func reset() {
         mode = ""
+        activeTeam = ""
         sampledGameTime = nil
         sampledAt = .distantPast
         events = []

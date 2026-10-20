@@ -77,6 +77,12 @@ final class RecognitionTests: XCTestCase {
         XCTAssertEqual(ChampionRecognition.ownedItemIDs(active: active, roster: roster), [3115, 2003, 2003])
     }
 
+    func testActivePlayerTeamComesFromMatchingRosterIdentity() throws {
+        let active = try JSONDecoder().decode(ActivePlayer.self, from: Data(#"{"riotId":"Me#EUW","level":5,"currentGold":0}"#.utf8))
+        let roster = try JSONDecoder().decode([LiveRosterPlayer].self, from: Data(#"[{"riotId":"Other#EUW","championName":"Kayle","level":5,"team":"ORDER"},{"riotId":"Me#EUW","championName":"Talon","level":5,"team":"CHAOS"}]"#.utf8))
+        XCTAssertEqual(ChampionRecognition.team(active: active, roster: roster), "CHAOS")
+    }
+
     func testEveryRerollReplacesRatingsOnItsFirstExactFrame() {
         var stable = StableCards()
         XCTAssertEqual(stable.observe([1, 2, 3], exactTriple: true), [1, 2, 3])

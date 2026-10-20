@@ -36,18 +36,34 @@ private final class JungleRoutePanel: NSPanel {
 }
 
 private struct JungleRouteMapView: View {
-    let side: JungleStartSide
+    let start: JungleStartSide
     let route: JungleRouteChoice
+    let activeTeam: String
     let opacity: Double
 
     private var points: [CGPoint] {
-        let blue: [CGPoint]
-        switch route {
-        case .fullClear: blue = [.init(x: 0.28, y: 0.27), .init(x: 0.20, y: 0.39), .init(x: 0.34, y: 0.45), .init(x: 0.48, y: 0.57), .init(x: 0.61, y: 0.67), .init(x: 0.73, y: 0.57)]
-        case .levelThree: blue = [.init(x: 0.28, y: 0.27), .init(x: 0.20, y: 0.39), .init(x: 0.34, y: 0.45), .init(x: 0.53, y: 0.50)]
-        case .invade: blue = [.init(x: 0.28, y: 0.27), .init(x: 0.34, y: 0.45), .init(x: 0.62, y: 0.69), .init(x: 0.74, y: 0.72)]
+        // ORDER-side camp centers in normalized minimap coordinates. Starting
+        // buff changes only the clear order; it must not rotate the route to
+        // the enemy jungle. CHAOS-side players are rotated independently.
+        let gromp = CGPoint(x: 0.145, y: 0.565)
+        let blue = CGPoint(x: 0.260, y: 0.530)
+        let wolves = CGPoint(x: 0.255, y: 0.425)
+        let raptors = CGPoint(x: 0.440, y: 0.350)
+        let red = CGPoint(x: 0.520, y: 0.270)
+        let krugs = CGPoint(x: 0.565, y: 0.180)
+        let midRiver = CGPoint(x: 0.500, y: 0.500)
+        let orderPoints: [CGPoint]
+        switch (route, start) {
+        case (.fullClear, .blue): orderPoints = [blue, gromp, wolves, raptors, red, krugs]
+        case (.fullClear, .red): orderPoints = [red, krugs, raptors, wolves, blue, gromp]
+        case (.levelThree, .blue): orderPoints = [blue, gromp, red, midRiver]
+        case (.levelThree, .red): orderPoints = [red, blue, gromp, midRiver]
+        case (.invade, .blue): orderPoints = [blue, gromp, midRiver, CGPoint(x: 0.740, y: 0.470)]
+        case (.invade, .red): orderPoints = [red, raptors, midRiver, CGPoint(x: 0.480, y: 0.730)]
         }
-        return side == .blue ? blue : blue.map { CGPoint(x: 1 - $0.x, y: 1 - $0.y) }
+        return activeTeam == "CHAOS"
+            ? orderPoints.map { CGPoint(x: 1 - $0.x, y: 1 - $0.y) }
+            : orderPoints
     }
 
     var body: some View {
@@ -76,18 +92,19 @@ private struct JungleRouteMapView: View {
     private var panel: JungleRoutePanel?
     private var signature = ""
     func update(store: JungleRouteStore, model: OverlayModel, layouts: OverlayLayoutStore,
-                gameMode: String, game: GameSurface?) {
+                gameMode: String, activeTeam: String, game: GameSurface?) {
         guard store.enabled, gameMode.uppercased() == "CLASSIC", let game, game.foreground else { hide(); return }
         let panel = self.panel ?? makePanel()
         let layout = layouts.adjustment(for: .jungleRoute, frame: game.frame)
         let bounds = game.frame
         let baseSide = min(bounds.width * 0.151, bounds.height * 0.268)
         let side = baseSide * layout.scale * model.overlayScale
-        let next = "\(store.side.rawValue):\(store.route.rawValue):\(side):\(layout.opacity):\(model.opacity)"
+        let next = "\(store.side.rawValue):\(store.route.rawValue):\(activeTeam):\(side):\(layout.opacity):\(model.opacity)"
         if signature != next {
             signature = next
             panel.contentView = NSHostingView(rootView: JungleRouteMapView(
-                side: store.side, route: store.route, opacity: model.opacity * layout.opacity
+                start: store.side, route: store.route, activeTeam: activeTeam,
+                opacity: model.opacity * layout.opacity
             ))
         }
         let frame = CGRect(x: bounds.maxX - side + layout.offsetX * bounds.width,
