@@ -17,6 +17,7 @@ final class ControlWindow: NSWindow {}
     let jungleRoute = JungleRouteStore()
     let postGame = PostGameStore()
     let aiReview = AIReviewStore()
+    let champSelect = ChampSelectAutomationStore()
     private let hints = HintOverlayController()
     private let objectiveTimerOverlay = ObjectiveTimerOverlayController()
     private let itemBuildOverlay = ItemBuildOverlayController()
@@ -34,7 +35,7 @@ final class ControlWindow: NSWindow {}
     private var layoutTimer: Timer?
     private var lastDiagnosticWrite = Date.distantPast
     private var displayedVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.6.1"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.6.2"
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -46,7 +47,7 @@ final class ControlWindow: NSWindow {}
         controls.contentView = NSHostingView(rootView: GuideControlView(model: model, guide: guide, recognition: recognition,
             calibration: calibration, objectiveTimers: objectiveTimers, lobbyScout: lobbyScout,
             updateChecker: updateChecker, overlayLayouts: overlayLayouts, jungleRoute: jungleRoute, postGame: postGame,
-            aiReview: aiReview,
+            aiReview: aiReview, champSelect: champSelect,
             displayedVersion: displayedVersion,
             startCalibration: { [weak self] in self?.startCalibration() },
             startLayoutEditing: { [weak self] in self?.startLayoutEditing() },
@@ -70,6 +71,7 @@ final class ControlWindow: NSWindow {}
         if let layoutTimer { RunLoop.main.add(layoutTimer, forMode: .common) }
         registerHotkeys()
         guide.load(); recognition.start(guide: guide, objectiveTimers: objectiveTimers); objectiveTimers.start(); lobbyScout.start(); postGame.start()
+        champSelect.start(guide: guide)
         updateChecker.check(currentVersion: displayedVersion)
         updateHints()
         if !CGPreflightScreenCaptureAccess() {
@@ -178,7 +180,11 @@ final class ControlWindow: NSWindow {}
             "failedPlayerProfiles": lobbyScout.failedProfileCount,
             "playerRegion": lobbyScout.activeRegion?.rawValue ?? "auto",
             "scoreboardVisible": recognition.isScoreboardVisible,
-            "generatedAt": ISO8601DateFormatter().string(from: Date())
+            "generatedAt": ISO8601DateFormatter().string(from: Date()),
+            "champSelectStatus": champSelect.status,
+            "automaticRunes": champSelect.automaticRunes,
+            "automaticSpells": champSelect.automaticSpells,
+            "flashSlot": champSelect.flashSlot.title
         ]
     }
     private func copyDiagnostics() {

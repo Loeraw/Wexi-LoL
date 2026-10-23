@@ -73,6 +73,62 @@ final class GuideParserTests: XCTestCase {
         XCTAssertEqual(result.itemBuilds[0].games, 1234)
         XCTAssertEqual(result.itemBuilds[0].winRate, 56.7, accuracy: 0.001)
     }
+    func testRecommendedLoadoutChoosesLargestSampleAndReadsSpells() throws {
+        let html = try page(["data": [
+            ["play": 90, "pick_rate": 0.1, "win_rate": 0.51, "importClientData": [
+                "primaryStyleId": 8200, "subStyleId": 8100,
+                "selectedPerkIds": [8214, 8226, 8210, 8237, 8139, 8106, 5008, 5008, 5001]
+            ]],
+            ["play": 1_200, "pick_rate": 0.7, "win_rate": 0.53, "importClientData": [
+                "primaryStyleId": 8100, "subStyleId": 8200,
+                "selectedPerkIds": [8112, 8139, 8140, 8106, 8210, 8226, 5005, 5008, 5001]
+            ]],
+            ["children": [
+                ["metaId": 4, "metaType": "spell"],
+                ["metaId": 14, "metaType": "spell"]
+            ]]
+        ]])
+        let loadout = try XCTUnwrap(GuideParser.parse(html).loadout)
+        XCTAssertEqual(loadout.primaryStyleID, 8100)
+        XCTAssertEqual(loadout.secondaryStyleID, 8200)
+        XCTAssertEqual(loadout.selectedPerkIDs.count, 9)
+        XCTAssertEqual(loadout.spellIDs, [4, 14])
+        XCTAssertEqual(loadout.games, 1_200)
+    }
+    func testRecommendedLoadoutIncludesSelectedPerkMetadata() throws {
+        let selected = [8112, 8139, 8140, 8106, 8210, 8226, 5005, 5008, 5001]
+        let metadata = selected.map { id in
+            ["id": id, "name": "Perk \(id)",
+             "image_url": "https://cdn.example/perk/\(id).png"] as [String: Any]
+        }
+        let html = try page(["data": [[
+            "play": 1_200, "pick_rate": 0.7, "win_rate": 0.53,
+            "importClientData": ["primaryStyleId": 8100, "subStyleId": 8200,
+                                 "selectedPerkIds": selected],
+            "main_runes": metadata
+        ]]])
+        let loadout = try XCTUnwrap(GuideParser.parse(html).loadout)
+        XCTAssertEqual(loadout.perks.map(\.id), selected)
+        XCTAssertEqual(loadout.perks.first?.name, "Perk 8112")
+    }
+    func testSummonerSpellOrderPlacesFlashOnPreferredKey() {
+        XCTAssertEqual(SummonerSpellOrder.ordered([4, 14], flashSlot: .d), [4, 14])
+        XCTAssertEqual(SummonerSpellOrder.ordered([4, 14], flashSlot: .f), [14, 4])
+        XCTAssertEqual(SummonerSpellOrder.ordered([14, 4], flashSlot: .d), [4, 14])
+        XCTAssertEqual(SummonerSpellOrder.ordered([14, 4], flashSlot: .f), [14, 4])
+        XCTAssertEqual(SummonerSpellOrder.ordered([7, 14], flashSlot: .f), [7, 14])
+    }
+    func testRecommendedLoadoutURLsSeparateRankedAndARAM() throws {
+        let ranked = try XCTUnwrap(RecommendedLoadoutSource.urls(champion: "ahri", position: "mid", mode: .ranked))
+        XCTAssertEqual(ranked.runes.absoluteString, "https://op.gg/lol/champions/ahri/runes/mid")
+        XCTAssertEqual(ranked.build.absoluteString, "https://op.gg/lol/champions/ahri/build/mid")
+
+        let aram = try XCTUnwrap(RecommendedLoadoutSource.urls(champion: "ahri", position: "mid", mode: .aram))
+        XCTAssertEqual(aram.runes.absoluteString, "https://op.gg/lol/modes/aram/ahri/runes")
+        XCTAssertEqual(aram.build.absoluteString, "https://op.gg/lol/modes/aram/ahri/build")
+
+        XCTAssertNil(RecommendedLoadoutSource.urls(champion: "../ahri", position: "mid", mode: .aram))
+    }
     func testArenaAugmentsReceiveSampleAdjustedTiersWithinRarity() throws {
         func augment(_ id: Int, _ name: String, _ rarity: Int, _ winRate: Double, _ games: String) -> [String: Any] {
             ["id": id, "name": name, "rareity": rarity, "win_rate": winRate,
@@ -137,5 +193,17 @@ final class GuideParserTests: XCTestCase {
         let arenaAugments = try GuideParser.parse(String(contentsOfFile: path + "/arena-augments.html"))
         XCTAssertGreaterThan(arenaAugments.augments.count, 20)
         XCTAssertTrue(arenaAugments.augments.allSatisfy { $0.winRate != nil && $0.games != nil })
+    }
+    func testFetchedLoadoutPagesWhenProvided() throws {
+        guard let path = ProcessInfo.processInfo.environment["RIFT_LOADOUT_FIXTURE_DIR"] else {
+            throw XCTSkip("Set RIFT_LOADOUT_FIXTURE_DIR for live loadout smoke test")
+        }
+        let runes = try GuideParser.parse(String(contentsOfFile: path + "/runes.html"))
+        let build = try GuideParser.parse(String(contentsOfFile: path + "/build.html"))
+        XCTAssertEqual(runes.loadout?.selectedPerkIDs.count, 9)
+        XCTAssertEqual(runes.loadout?.perks.count, 9)
+        XCTAssertTrue(runes.loadout?.perks.allSatisfy { !$0.name.isEmpty && $0.imageURL.hasPrefix("https://") } == true)
+        XCTAssertEqual(build.loadout?.spellIDs.count, 2)
+        XCTAssertNotEqual(build.loadout?.spellIDs.first, build.loadout?.spellIDs.last)
     }
 }

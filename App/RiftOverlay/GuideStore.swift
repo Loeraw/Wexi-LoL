@@ -18,6 +18,7 @@ enum GuideMode: String, CaseIterable, Identifiable, Sendable {
     }
     var supportsAugmentTiers: Bool { self == .mayhem || self == .arena }
     var hasDerivedAugmentTiers: Bool { self == .arena }
+    var supportsRunes: Bool { self == .ranked || self == .aram }
 
     static func from(liveMode: String) -> GuideMode? {
         switch liveMode.uppercased() {
@@ -36,6 +37,7 @@ private struct GuideCacheEntry {
     let skills: GuidePage?
     let items: GuidePage?
     let augments: GuidePage?
+    let runes: GuidePage?
 }
 
 @MainActor final class GuideStore: ObservableObject {
@@ -46,6 +48,7 @@ private struct GuideCacheEntry {
     @Published var augments: [AugmentRating] = []
     @Published var skills: SkillGuide?
     @Published var itemBuilds: [ItemBuild] = []
+    @Published var loadout: RecommendedLoadout?
     @Published var patch = "—"
     @Published var status = "选择英雄后加载攻略"
     @Published var loading = false
@@ -92,22 +95,24 @@ private struct GuideCacheEntry {
         let language = LanguageSettings.shared.selection
         let gameLanguage = LanguageSettings.shared.gameLanguage
         let cacheKey = "\(language.rawValue):\(gameLanguage.rawValue):\(selectedMode.rawValue):\(key)"
-        augments = []; skills = nil; itemBuilds = []; pinned = []; recognized = []; patch = "—"; fetchedAt = nil
+        augments = []; skills = nil; itemBuilds = []; loadout = nil; pinned = []; recognized = []; patch = "—"; fetchedAt = nil
         augmentSearch = ""
         loading = true; status = "正在读取 OP.GG 攻略…"
         let augmentURL = Self.sourceURL("augments", champion: key, mode: selectedMode, language: language)
         let skillURL = Self.sourceURL("skills", champion: key, mode: selectedMode, language: language)
         let itemURL = Self.sourceURL("items", champion: key, mode: selectedMode, language: language)
+        let runeURL = Self.sourceURL("runes", champion: key, mode: selectedMode, language: language)
         request = Task {
             do {
-                let primaryPage: GuidePage, augmentPage: GuidePage?, skillPage: GuidePage?, itemPage: GuidePage?
+                let primaryPage: GuidePage, augmentPage: GuidePage?, skillPage: GuidePage?, itemPage: GuidePage?, runePage: GuidePage?
                 let date: Date
                 if !force, let cache = cached[cacheKey], Date().timeIntervalSince(cache.date) < 1800 {
                     date = cache.date; primaryPage = cache.primary
-                    skillPage = cache.skills; itemPage = cache.items; augmentPage = cache.augments
+                    skillPage = cache.skills; itemPage = cache.items; augmentPage = cache.augments; runePage = cache.runes
                 } else {
                     async let item = Self.fetch(itemURL, language: language)
                     async let skill = try? Self.fetch(skillURL, language: language)
+                    async let runes = selectedMode.supportsRunes ? (try? Self.fetch(runeURL, language: language)) : nil
                     async let augment = selectedMode.supportsAugmentTiers ? (try? Self.fetch(augmentURL, language: language)) : nil
                     async let mayhemStats = selectedMode == .mayhem ? (try? Self.fetchMayhemStats()) : nil
                     let fetchedItems = try await item
@@ -115,6 +120,7 @@ private struct GuideCacheEntry {
                     let fetchedMayhemStats = await mayhemStats
                     itemPage = fetchedItems
                     skillPage = await skill
+                    runePage = await runes
                     if let fetchedAugments, let fetchedMayhemStats,
                        fetchedMayhemStats.patch == nil || fetchedMayhemStats.patch == fetchedAugments.patch {
                         augmentPage = Self.merging(fetchedMayhemStats, into: fetchedAugments)
@@ -130,8 +136,8 @@ private struct GuideCacheEntry {
                     throw GuideParseError.pageStructureChanged
                 }
                 cached[cacheKey] = GuideCacheEntry(date: date, primary: primaryPage, skills: skillPage,
-                                                   items: itemPage, augments: augmentPage)
-                champions = [primaryPage, itemPage, skillPage, augmentPage]
+                                                   items: itemPage, augments: augmentPage, runes: runePage)
+                champions = [primaryPage, itemPage, skillPage, augmentPage, runePage]
                     .compactMap { $0 }.first { !$0.champions.isEmpty }?.champions ?? champions
                 augments = (augmentPage?.augments ?? []).sorted {
                     if $0.tier != $1.tier { return $0.tier < $1.tier }
@@ -140,6 +146,7 @@ private struct GuideCacheEntry {
                 }
                 skills = skillPage?.skills
                 itemBuilds = itemPage?.itemBuilds ?? []
+                loadout = runePage?.loadout
                 patch = resolvedPatch ?? "—"; fetchedAt = date
                 status = augments.isEmpty
                     ? "已加载 %d 套出装路线 · OP.GG 全球数据"
@@ -178,7 +185,7 @@ private struct GuideCacheEntry {
                         return $0.id < $1.id
                     }
                     cached[cacheKey] = GuideCacheEntry(date: date, primary: primaryPage, skills: skillPage,
-                                                       items: itemPage, augments: enriched)
+                                                       items: itemPage, augments: enriched, runes: runePage)
                 }
             } catch {
                 guard !Task.isCancelled, generation == token else { return }
@@ -198,7 +205,7 @@ private struct GuideCacheEntry {
     private nonisolated static func fetch(_ url: URL, language: AppLanguage) async throws -> GuidePage {
         var request = URLRequest(url: url)
         request.timeoutInterval = 20
-        request.setValue("WexiLoL/0.6.1", forHTTPHeaderField: "User-Agent")
+        request.setValue("WexiLoL/0.6.2", forHTTPHeaderField: "User-Agent")
         request.setValue(language.acceptLanguage, forHTTPHeaderField: "Accept-Language")
         // OP.GG stores its last locale in a cookie. A shared session can therefore
         // return Chinese content for the unprefixed English URL after visiting
@@ -217,7 +224,7 @@ private struct GuideCacheEntry {
     private nonisolated static func fetchMayhemStats() async throws -> MayhemAugmentStatsPage {
         var request = URLRequest(url: URL(string: "https://hexmayhem.com/augments")!)
         request.timeoutInterval = 20
-        request.setValue("WexiLoL/0.6.1", forHTTPHeaderField: "User-Agent")
+        request.setValue("WexiLoL/0.6.2", forHTTPHeaderField: "User-Agent")
         let configuration = URLSessionConfiguration.ephemeral
         configuration.httpShouldSetCookies = false
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData

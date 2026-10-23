@@ -9,14 +9,14 @@
   <a href="https://loeraw.github.io/Wexi-LoL/"><img src="https://img.shields.io/badge/Website-Wexi%20LoL-6D28D9" alt="Wexi LoL website"></a>
   <a href="https://www.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-13%2B-000000?logo=apple" alt="macOS 13+"></a>
   <a href="https://www.swift.org/"><img src="https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&amp;logoColor=white" alt="Swift 5.9"></a>
-  <a href="https://github.com/Loeraw/Wexi-LoL/releases/tag/v0.6.1"><img src="https://img.shields.io/badge/release-v0.6.1-D26A3A" alt="Release v0.6.1"></a>
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/tag/v0.6.2"><img src="https://img.shields.io/badge/release-v0.6.2-D26A3A" alt="Release v0.6.2"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"></a>
 </p>
 
 ## 下载 / Download
 
 <p align="center">
-  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.6.1/Wexi.LoL-0.6.1.dmg">
+  <a href="https://github.com/Loeraw/Wexi-LoL/releases/download/v0.6.2/Wexi.LoL-0.6.2.dmg">
     <img src="https://img.shields.io/badge/DOWNLOAD-LATEST-D2A53A?style=for-the-badge&amp;labelColor=555555" alt="Download latest Wexi LoL DMG">
   </a>
 </p>
@@ -56,6 +56,7 @@ Wexi LoL is a native macOS companion overlay for League of Legends. It provides 
 | 技能加点 | 根据当前英雄、等级和已分配技能点提示下一次 Q/W/E/R 加点 | Suggests the next Q/W/E/R upgrade from the champion, level, and current ranks |
 | 目标计时 | 显示峡谷史诗目标刷新时间，并在大乱斗小地图上显示血包倒计时 | Tracks Rift epic objectives and shows ARAM health-relic countdowns on the minimap |
 | 出装推荐 | 显示 OP.GG 主流三件套、胜率、选用率和下一件装备；游戏内面板可随时收起和恢复 | Shows popular OP.GG three-item builds, win rate, pick rate, and the next item; the in-game panel can be collapsed and restored |
+| 推荐符文 | 主界面在当前模式提供符文数据时，显示 OP.GG 最常用的完整符文页、选用率、胜率和场次 | When the selected mode provides rune data, shows the most popular complete OP.GG rune page, pick rate, win rate, and games |
 | 模式面板 | 主界面按排位、大乱斗混乱、极地大乱斗和斗魂竞技场分别展示攻略；斗魂海克斯根据胜率与样本生成评级 | Separate guide panels for Ranked, ARAM: Mayhem, ARAM, and Arena; Arena augment tiers are calculated from win rate and sample size |
 | 玩家资料 | 自动识别当前区服，在 Loading 时读取本局 10 名玩家的段位、胜率和最近 5 场 W/L；排位 Tab 面板还显示前三常用英雄及使用率 | Auto-detects the current region and loads rank, win rate, and recent W/L for all 10 players; Ranked Tab panels also show each player's top three champions and usage rates |
 | 分辨率适配 | Loading 与 Tab 玩家卡片优先跟随 OCR 识别到的实际位置；小地图 Overlay 自动检测实际边框和尺寸；超宽屏使用居中 16:9 区域，并可按分辨率保存布局 | Loading and Tab player cards follow OCR-detected positions; minimap overlays detect its actual bounds and size; ultrawide layouts use a centered 16:9 region with layouts saved per resolution |
@@ -64,6 +65,7 @@ Wexi LoL is a native macOS companion overlay for League of Legends. It provides 
 | 排位赛前分析 | Loading 界面汇总双方平均胜率、近期胜场和常用英雄匹配，并显示技能优先级与两条出装分支 | Ranked loading screen summarizes team win rates, recent form, comfort picks, skill priority, and two build paths |
 | 个人赛后复盘 | 仅在本机记录自己的 KDA、补刀、视野与时长，显示最近十局趋势；可选择使用自己的兼容 OpenAI API 生成 AI 建议，密钥存入 macOS Keychain | Locally records only your KDA, CS, vision, and duration, shows a ten-game trend, and can optionally generate advice with your own OpenAI-compatible API; the key is stored in macOS Keychain |
 | 打野路线 | 游戏内面板可开关路线并选择蓝/红起手、全清、三级抓人或反向入侵；路线按阵营与小地图尺寸自适应，并在首轮刷野完成后自动收起 | Use the in-game panel to toggle the route and choose Blue/Red start, full clear, level-three gank, or reverse invade; routes adapt to team and minimap size and close after the first clear |
+| 选人自动配置 | 可选地在排位或普通大乱斗选人阶段应用对应模式的 OP.GG 推荐符文和召唤师技能；只维护一个 Wexi LoL 符文页并保留后续手动修改 | Optionally applies mode-specific OP.GG runes and summoner spells during Ranked or regular ARAM champ select; maintains one Wexi LoL rune page and preserves later manual changes |
 | 多语言界面与识别 | Wexi 界面可选择 12 种语言；游戏客户端语言可独立选择 15 种，并加载对应 OP.GG 海克斯名称与 Vision OCR | Choose from 12 Wexi interface languages and independently select one of 15 game-client languages for localized OP.GG augment names and Vision OCR |
 
 正常提示窗口支持鼠标穿透，不会阻止点击技能或海克斯卡片；只有明确显示的收起/恢复按钮接收鼠标点击。游戏进入后台时，提示会自动隐藏。
@@ -126,6 +128,24 @@ Screen Recording is used only to read the foreground League of Legends window fo
 - The in-game build panel matches completed core items to a popular OP.GG three-item route and marks the next item.
 - Use the top-right arrow to collapse it, then click the small item icon to restore it. The main panel continues to ignore mouse input.
 
+### 选人自动配置 / Champ-select Setup
+
+- 主界面会在当前模式提供符文数据时显示推荐符文、选用率、胜率和样本数；将鼠标停在图标上可查看符文名称。
+- 在设置中可分别开启“自动应用推荐符文”和“自动应用推荐召唤师技能”；两项默认关闭。
+- Wexi 通过 League Client 本机接口识别英雄与分路，并加载 OP.GG 全球推荐。
+- 排位按英雄和分路读取符文；普通极地大乱斗读取独立的 ARAM 符文数据，不共用排位缓存。海克斯大乱斗和斗魂竞技场不显示符文。
+- 应用只发生一次，之后玩家在本轮选人中的手动修改不会被覆盖。
+- Wexi 只维护一个以 `Wexi LoL - 英雄名` 命名的符文页；换英雄时替换内容和名称，不删除玩家自己的页面。
+- 设置中可选择闪现使用 D 或 F，另一个推荐召唤师技能会自动放到另一按键。
+
+- When the selected mode provides rune data, the main screen shows recommended runes, pick rate, win rate, and sample size; hover an icon to see its name.
+- Settings provides separate opt-in switches for recommended runes and summoner spells; both are off by default.
+- Wexi detects the champion and assigned role through the local League Client interface and loads the global OP.GG recommendation.
+- Ranked recommendations use the champion and assigned role; regular ARAM uses its own rune data and never shares the Ranked cache. ARAM: Mayhem and Arena do not show rune recommendations.
+- The recommendation is applied once, so later manual changes during the same champ select are preserved.
+- Wexi maintains one rune page named `Wexi LoL - Champion`; switching champions replaces its contents and localized name without deleting player-created pages.
+- Settings lets you place Flash on D or F; the other recommended summoner spell is assigned to the remaining key.
+
 ### 对局玩家 / Player Scouting
 
 - Loading 界面只读取一次当前 10 名玩家的公开 OP.GG 资料，并缓存在本局内存中。
@@ -142,17 +162,17 @@ Screen Recording is used only to read the foreground League of Legends window fo
 
 ## 数据来源与隐私 / Data Sources and Privacy
 
-- 英雄、等级、技能、装备和目标事件来自 Riot 本机游戏接口。
-- 海克斯评级、技能顺序、出装和公开玩家资料来自 [OP.GG](https://op.gg/) 公共页面。
+- 英雄、等级、技能、装备和目标事件来自 Riot 本机游戏接口；可选的选人自动配置使用 League Client 本机接口。
+- 海克斯评级、技能顺序、出装、符文、召唤师技能和公开玩家资料来自 [OP.GG](https://op.gg/) 公共页面。
 - 玩家资料会根据自动识别或手动选择的区服访问对应的 OP.GG 页面。
-- 应用不读取游戏进程内存、不注入游戏、不自动点击、不自动选卡或加点。
+- 应用不读取游戏进程内存、不注入游戏、不自动点击、不自动选卡或加点。只有玩家主动开启时，才会通过本机 League Client 接口更新 Wexi LoL 符文页或召唤师技能。
 - 玩家资料仅保存在本局内存缓存中，不写入磁盘。
 - 本机诊断状态保存在 `~/Library/Application Support/WexiLoL/status.json`，不包含截图、完整 OCR 文本或玩家身份。
 
-- Champion, level, skill, item, and objective-event data comes from Riot's local game APIs.
-- Augment ratings, skill orders, builds, and public player profiles come from public [OP.GG](https://op.gg/) pages.
+- Champion, level, skill, item, and objective-event data comes from Riot's local game APIs; optional champ-select setup uses the local League Client interface.
+- Augment ratings, skill orders, builds, runes, summoner spells, and public player profiles come from public [OP.GG](https://op.gg/) pages.
 - Player scouting uses the OP.GG page for the automatically detected or manually selected region.
-- The app does not read game-process memory, inject into the game, click automatically, choose augments, or spend skill points.
+- The app does not read game-process memory, inject into the game, click automatically, choose augments, or spend skill points. Only when explicitly enabled does it update the Wexi LoL rune page or summoner spells through the local League Client interface.
 - Player profiles remain only in the current match's in-memory cache and are not written to disk.
 - Local diagnostics are stored at `~/Library/Application Support/WexiLoL/status.json` and do not include screenshots, full OCR text, or player identities.
 
@@ -181,9 +201,9 @@ swift test
 ./script/package_source.sh
 ```
 
-当前测试套件包含 69 项测试，其中四项公共网页冒烟测试需要单独提供本地 fixture。
+当前测试套件包含 74 项测试，其中五项公共网页冒烟测试需要单独提供本地 fixture。
 
-The current suite contains 69 tests. Four public-page smoke tests require optional local fixtures.
+The current suite contains 74 tests. Five public-page smoke tests require optional local fixtures.
 
 ## 已知限制 / Known Limitations
 

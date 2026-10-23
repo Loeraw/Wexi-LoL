@@ -3,6 +3,16 @@ import Foundation
 public struct ChampionOption: Identifiable, Equatable, Sendable {
     public let id: String
     public let name: String
+
+    /// Riot's numeric champion id, used to match League Client champ-select
+    /// sessions to OP.GG's stable champion slug without OCR.
+    public let numericID: Int?
+
+    public init(id: String, name: String, numericID: Int? = nil) {
+        self.id = id
+        self.name = name
+        self.numericID = numericID
+    }
 }
 public struct AugmentRating: Identifiable, Equatable, Sendable {
     public let id: Int
@@ -88,7 +98,106 @@ public struct GuidePage: Sendable {
     public var augments: [AugmentRating] = []
     public var skills: SkillGuide?
     public var itemBuilds: [ItemBuild] = []
+    public var loadout: RecommendedLoadout?
     public var patch: String?
+}
+
+public struct RecommendedLoadout: Equatable, Sendable {
+    public let primaryStyleID: Int
+    public let secondaryStyleID: Int
+    public let selectedPerkIDs: [Int]
+    public let spellIDs: [Int]
+    public let games: Int
+    public let pickRate: Double?
+    public let winRate: Double?
+    public let perks: [RecommendedPerk]
+
+    public init(primaryStyleID: Int, secondaryStyleID: Int, selectedPerkIDs: [Int],
+                spellIDs: [Int] = [], games: Int = 0, pickRate: Double? = nil,
+                winRate: Double? = nil, perks: [RecommendedPerk] = []) {
+        self.primaryStyleID = primaryStyleID
+        self.secondaryStyleID = secondaryStyleID
+        self.selectedPerkIDs = selectedPerkIDs
+        self.spellIDs = spellIDs
+        self.games = games
+        self.pickRate = pickRate
+        self.winRate = winRate
+        self.perks = perks
+    }
+
+    public func withSpellIDs(_ ids: [Int]) -> RecommendedLoadout {
+        RecommendedLoadout(primaryStyleID: primaryStyleID, secondaryStyleID: secondaryStyleID,
+                           selectedPerkIDs: selectedPerkIDs, spellIDs: ids, games: games,
+                           pickRate: pickRate, winRate: winRate, perks: perks)
+    }
+
+    public func withPerks(_ values: [RecommendedPerk]) -> RecommendedLoadout {
+        RecommendedLoadout(primaryStyleID: primaryStyleID, secondaryStyleID: secondaryStyleID,
+                           selectedPerkIDs: selectedPerkIDs, spellIDs: spellIDs, games: games,
+                           pickRate: pickRate, winRate: winRate, perks: values)
+    }
+}
+
+public struct RecommendedPerk: Identifiable, Equatable, Sendable {
+    public let id: Int
+    public let name: String
+    public let imageURL: String
+
+    public init(id: Int, name: String, imageURL: String) {
+        self.id = id
+        self.name = name
+        self.imageURL = imageURL
+    }
+}
+
+public enum FlashSlot: String, CaseIterable, Identifiable, Sendable {
+    case d
+    case f
+
+    public var id: String { rawValue }
+    public var title: String { rawValue.uppercased() }
+}
+
+public enum SummonerSpellOrder {
+    public static let flashID = 4
+
+    /// LCU's first spell slot is D and its second spell slot is F.
+    public static func ordered(_ spellIDs: [Int], flashSlot: FlashSlot) -> [Int] {
+        guard spellIDs.count == 2, let flashIndex = spellIDs.firstIndex(of: flashID) else {
+            return spellIDs
+        }
+        let desiredIndex = flashSlot == .d ? 0 : 1
+        guard flashIndex != desiredIndex else { return spellIDs }
+        return [spellIDs[1], spellIDs[0]]
+    }
+}
+
+public enum LoadoutGameMode: String, Sendable {
+    case ranked
+    case aram
+}
+
+public enum RecommendedLoadoutSource {
+    public static func urls(champion: String, position: String,
+                            mode: LoadoutGameMode) -> (runes: URL, build: URL)? {
+        guard champion.range(of: #"^[a-z0-9]+$"#, options: .regularExpression) != nil else {
+            return nil
+        }
+        let base: String
+        let suffix: String
+        switch mode {
+        case .ranked:
+            guard position.range(of: #"^[a-z]+$"#, options: .regularExpression) != nil else { return nil }
+            base = "https://op.gg/lol/champions/\(champion)"
+            suffix = "/\(position)"
+        case .aram:
+            base = "https://op.gg/lol/modes/aram/\(champion)"
+            suffix = ""
+        }
+        guard let runes = URL(string: "\(base)/runes\(suffix)"),
+              let build = URL(string: "\(base)/build\(suffix)") else { return nil }
+        return (runes, build)
+    }
 }
 
 public struct MayhemAugmentStats: Equatable, Sendable {
@@ -197,6 +306,9 @@ public enum GuideParser {
             flight += value
         }
         var output = GuidePage()
+        var loadoutCandidates: [RecommendedLoadout] = []
+        var spellCandidates: [Int] = []
+        var perkMetadata: [Int: RecommendedPerk] = [:]
         func walk(_ object: Any) {
             if let dict = object as? [String: Any] {
                 if let query = dict["query"] as? [String: Any], let patch = query["patch"] as? String,
@@ -206,9 +318,31 @@ public enum GuideParser {
                 if let champs = dict["champions"] as? [[String: Any]], output.champions.isEmpty {
                     output.champions = champs.compactMap { row in
                         guard let key = row["key"] as? String, let name = row["name"] as? String,
-                              row["champion_id"] is Int else { return nil }
-                        return ChampionOption(id: key, name: name)
+                              let championID = row["champion_id"] as? Int else { return nil }
+                        return ChampionOption(id: key, name: name, numericID: championID)
                     }
+                }
+                if let importData = dict["importClientData"] as? [String: Any],
+                   let primary = importData["primaryStyleId"] as? Int,
+                   let secondary = importData["subStyleId"] as? Int,
+                   let perks = importData["selectedPerkIds"] as? [Int],
+                   perks.count == 9,
+                   primary > 0, secondary > 0 {
+                    loadoutCandidates.append(RecommendedLoadout(
+                        primaryStyleID: primary, secondaryStyleID: secondary,
+                        selectedPerkIDs: perks, games: count(dict["play"]) ?? 0,
+                        pickRate: number(dict["pick_rate"]), winRate: number(dict["win_rate"])
+                    ))
+                }
+                if dict["metaType"] as? String == "spell", let spellID = dict["metaId"] as? Int,
+                   spellID > 0, !spellCandidates.contains(spellID) {
+                    spellCandidates.append(spellID)
+                }
+                if let id = dict["id"] as? Int, let name = dict["name"] as? String,
+                   let imageURL = dict["image_url"] as? String,
+                   imageURL.hasPrefix("https://"),
+                   imageURL.contains("/perk/") || imageURL.contains("/perkShard/") {
+                    perkMetadata[id] = RecommendedPerk(id: id, name: name, imageURL: imageURL)
                 }
                 if let rows = dict["data"] as? [[String: Any]], output.augments.isEmpty {
                     output.augments = rows.compactMap { row in
@@ -264,7 +398,20 @@ public enum GuideParser {
             let payload = line[line.index(after: colon)...]
             if let object = try? JSONSerialization.jsonObject(with: Data(payload.utf8), options: .fragmentsAllowed) { walk(object) }
         }
-        guard !output.augments.isEmpty || output.skills != nil || !output.itemBuilds.isEmpty else { throw GuideParseError.pageStructureChanged }
+        output.loadout = loadoutCandidates.max {
+            if $0.games != $1.games { return $0.games < $1.games }
+            return ($0.pickRate ?? 0) < ($1.pickRate ?? 0)
+        }
+        if let loadout = output.loadout {
+            let perks = loadout.selectedPerkIDs.compactMap { perkMetadata[$0] }
+            output.loadout = loadout.withPerks(perks)
+        }
+        if let loadout = output.loadout, spellCandidates.count >= 2 {
+            output.loadout = loadout.withSpellIDs(Array(spellCandidates.prefix(2)))
+        }
+        guard !output.augments.isEmpty || output.skills != nil || !output.itemBuilds.isEmpty || output.loadout != nil else {
+            throw GuideParseError.pageStructureChanged
+        }
         return output
     }
 

@@ -35,6 +35,51 @@ private struct GuideBuildRow: View {
     }
 }
 
+private struct GuideRuneView: View {
+    let loadout: RecommendedLoadout
+
+    private var pickRate: Double? { loadout.pickRate.map { $0 <= 1 ? $0 * 100 : $0 } }
+    private var winRate: Double? { loadout.winRate.map { $0 <= 1 ? $0 * 100 : $0 } }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(L10n.text("推荐符文")).font(.title3.bold())
+                Spacer()
+                Text(L10n.text("最常用方案")).font(.caption).foregroundStyle(.secondary)
+            }
+            HStack(spacing: 8) {
+                ForEach(Array(loadout.selectedPerkIDs.enumerated()), id: \.offset) { index, id in
+                    if index == 4 || index == 6 {
+                        Divider().frame(height: 30).padding(.horizontal, 2)
+                    }
+                    let metadata = loadout.perks.first { $0.id == id }
+                    AsyncImage(url: metadata.flatMap { URL(string: $0.imageURL) }) { phase in
+                        if let image = phase.image {
+                            image.resizable().scaledToFit()
+                        } else {
+                            Text("\(id)").font(.system(size: 7, weight: .medium)).foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(width: index >= 6 ? 27 : 32, height: index >= 6 ? 27 : 32)
+                    .background(.black.opacity(0.28), in: Circle())
+                    .help(metadata?.name ?? "#\(id)")
+                    .accessibilityLabel(metadata?.name ?? "#\(id)")
+                }
+            }
+            if let pickRate, let winRate {
+                Text(L10n.text("OP.GG · 选用率 %.1f%% · 胜率 %.1f%% · %d 场", pickRate, winRate, loadout.games))
+                    .font(.system(size: 10)).foregroundStyle(.secondary)
+            } else if let pickRate {
+                Text(L10n.text("OP.GG · 选用率 %.1f%% · %d 场", pickRate, loadout.games))
+                    .font(.system(size: 10)).foregroundStyle(.secondary)
+            }
+        }
+        .padding(16)
+        .background(.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+    }
+}
+
 struct SkillOrderView: View {
     @ObservedObject private var language = LanguageSettings.shared
     let guide: SkillGuide
@@ -115,6 +160,7 @@ struct GuideControlView: View {
     @ObservedObject var jungleRoute: JungleRouteStore
     @ObservedObject var postGame: PostGameStore
     @ObservedObject var aiReview: AIReviewStore
+    @ObservedObject var champSelect: ChampSelectAutomationStore
     let displayedVersion: String
     let startCalibration: () -> Void
     let startLayoutEditing: () -> Void
@@ -216,6 +262,9 @@ struct GuideControlView: View {
                         Text(L10n.text("获取时间 %@", date.formatted(.dateTime.year().month(.abbreviated).day().hour().minute().locale(language.selection.locale))))
                             .font(.system(size: 10)).foregroundStyle(.secondary)
                     }
+                    if let loadout = guide.loadout {
+                        GuideRuneView(loadout: loadout)
+                    }
                     if !guide.itemBuilds.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
@@ -254,6 +303,9 @@ struct GuideControlView: View {
                     }
                     Divider()
                     HStack {
+                        if guide.loadout != nil {
+                            Link(L10n.text("OP.GG 符文来源 ↗"), destination: guide.sourceURL("runes"))
+                        }
                         Link(L10n.text("OP.GG 出装来源 ↗"), destination: guide.sourceURL("items"))
                         Link(L10n.text("OP.GG 加点来源 ↗"), destination: guide.sourceURL("skills"))
                         if guide.mode.supportsAugmentTiers {
@@ -424,6 +476,32 @@ struct GuideControlView: View {
                         ForEach(JungleRouteChoice.allCases) { option in Text(L10n.text(option.titleKey)).tag(option) }
                     }
                     Text(L10n.text("路线只提供可视参考，不会控制英雄或替玩家做出决定；仅在召唤师峡谷显示。"))
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+
+                settingsSection(L10n.text("选人自动配置")) {
+                    Toggle(L10n.text("自动应用 OP.GG 推荐符文"), isOn: $champSelect.automaticRunes)
+                    Toggle(L10n.text("自动应用 OP.GG 推荐召唤师技能"), isOn: $champSelect.automaticSpells)
+                    HStack {
+                        Text(L10n.text("闪现按键"))
+                        Spacer()
+                        Picker(L10n.text("闪现按键"), selection: $champSelect.flashSlot) {
+                            ForEach(FlashSlot.allCases) { slot in Text(slot.title).tag(slot) }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.segmented)
+                        .frame(width: 120)
+                    }
+                    Text(L10n.text("选择闪现放在 D 还是 F；另一个召唤师技能会自动放在另一按键。"))
+                        .font(.system(size: 11)).foregroundStyle(.secondary)
+                    HStack {
+                        Text(L10n.text("当前选择"))
+                        Spacer()
+                        Text("\(champSelect.champion) · \(champSelect.position)")
+                            .foregroundStyle(.secondary)
+                    }
+                    Text(L10n.text(champSelect.status)).font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text(L10n.text("换英雄时会替换同一个 Wexi LoL 符文页，并按客户端英雄名重命名；应用后不会覆盖玩家的手动修改。"))
                         .font(.system(size: 11)).foregroundStyle(.secondary)
                 }
 
