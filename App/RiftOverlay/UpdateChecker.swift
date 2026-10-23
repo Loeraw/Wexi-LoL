@@ -14,11 +14,13 @@ import RiftCore
     @Published private(set) var state: State = .idle
     private(set) var releaseURL: URL?
     private var task: Task<Void, Never>?
+    private var lastCheckStartedAt = Date.distantPast
 
     deinit { task?.cancel() }
 
     func check(currentVersion: String) {
         task?.cancel()
+        lastCheckStartedAt = Date()
         state = .checking
         task = Task { [weak self] in
             guard let self else { return }
@@ -41,6 +43,12 @@ import RiftCore
                 state = .failed
             }
         }
+    }
+
+    func checkIfNeeded(currentVersion: String, minimumInterval: TimeInterval) {
+        guard state != .checking,
+              Date().timeIntervalSince(lastCheckStartedAt) >= minimumInterval else { return }
+        check(currentVersion: currentVersion)
     }
 
     func openRelease() {

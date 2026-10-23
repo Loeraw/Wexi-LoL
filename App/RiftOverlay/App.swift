@@ -33,6 +33,7 @@ final class ControlWindow: NSWindow {}
     private var hotkeys: [EventHotKeyRef] = []
     private var handler: EventHandlerRef?
     private var layoutTimer: Timer?
+    private var updateTimer: Timer?
     private var lastDiagnosticWrite = Date.distantPast
     private var displayedVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.6.2"
@@ -69,6 +70,13 @@ final class ControlWindow: NSWindow {}
             Task { @MainActor in self?.updateHints() }
         }
         if let layoutTimer { RunLoop.main.add(layoutTimer, forMode: .common) }
+        updateTimer = Timer(timeInterval: 60 * 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.updateChecker.checkIfNeeded(currentVersion: self.displayedVersion, minimumInterval: 60 * 60)
+            }
+        }
+        if let updateTimer { RunLoop.main.add(updateTimer, forMode: .common) }
         registerHotkeys()
         guide.load(); recognition.start(guide: guide, objectiveTimers: objectiveTimers); objectiveTimers.start(); lobbyScout.start(); postGame.start()
         champSelect.start(guide: guide)
@@ -134,6 +142,7 @@ final class ControlWindow: NSWindow {}
         updateChecker.openRelease()
     }
     @objc func showControls() {
+        updateChecker.checkIfNeeded(currentVersion: displayedVersion, minimumInterval: 15 * 60)
         if controls.isMiniaturized { controls.deminiaturize(nil) }
         NSApp.activate(ignoringOtherApps: true)
         controls.makeKeyAndOrderFront(nil)
@@ -303,6 +312,7 @@ final class ControlWindow: NSWindow {}
     func applicationWillTerminate(_ notification: Notification) {
         recognition.stop(); objectiveTimers.stop(); lobbyScout.stop(); postGame.stop(); hints.hideAll(); objectiveTimerOverlay.hide(); itemBuildOverlay.hide(); lobbyScoutOverlay.hide(); jungleRouteOverlay.hide(); jungleRouteControl.hide(); layoutEditor.hide()
         layoutTimer?.invalidate()
+        updateTimer?.invalidate()
         hotkeys.forEach { UnregisterEventHotKey($0) }
         if let handler { RemoveEventHandler(handler) }
         NSWorkspace.shared.notificationCenter.removeObserver(self)
